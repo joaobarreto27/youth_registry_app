@@ -27,7 +27,7 @@ class SqlReadFile:
             self.query = file.read()
         return self.query
 
-    def execute_query_sql(self, params: Optional[dict] = None):
+    def execute_query_sql(self, params: Optional[dict] = None) -> Any | dict[str, Any]:
 
         if not self.query:
             raise ValueError("Query is empty. Please read the SQL file first.")
