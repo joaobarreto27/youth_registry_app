@@ -2,9 +2,7 @@
 name = "youth-registry-app"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "joaobarreto27",email = "joao.vito1951@gmail.com"}
-]
+authors = ["joaobarreto27 <joao.vito1951@gmail.com>"]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
