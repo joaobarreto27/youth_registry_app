@@ -23,6 +23,12 @@ dependencies = [
     "requests (>=2.32.5,<3.0.0)"
 ]
 
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["backend*", "frontend*"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
