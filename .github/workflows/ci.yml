@@ -53,26 +53,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install .[dev]
 
-      # # 6️⃣ Ruff lint
-      # - name: Ruff lint
-      #   run: ruff check .
-
-      # # 7️⃣ Ruff format
-      # - name: Ruff format check
-      #   run: ruff format . --check
-
-      # # 8️⃣ Mypy
-      # - name: Mypy type checking
-      #   run: mypy src
-
-      # # 9️⃣ Bandit
-      # - name: Bandit security scan
-      #   run: bandit -r src -x tests -s B101
-
-      # # 🔟 pip-audit
-      # - name: Pip-audit security check
-      #   run: pip-audit
-
   precommit:
     runs-on: ubuntu-latest
     needs: quality   # 👈 optional, but recommended
