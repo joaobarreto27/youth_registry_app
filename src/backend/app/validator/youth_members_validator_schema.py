@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class YouthMembersBase(BaseModel):
-    name: str = Field(..., min_length=3, max_length=255)
+    member_name: str = Field(..., min_length=3, max_length=255)
     phone_number: str = Field(..., min_length=10, max_length=15)
     t_shirt: str = Field(..., min_length=1, max_length=2)
     food_allergy: str = Field(..., min_length=1, max_length=3)
