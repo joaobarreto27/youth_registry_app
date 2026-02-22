@@ -2,7 +2,7 @@ from datetime import date, datetime
 from sqlalchemy import Column, Integer, String, Date, CHAR, DateTime
 from sqlalchemy.sql import func
 
-from . import Base
+from ..engine_database.base import Base
 
 
 class YouthMembersSchema(Base):

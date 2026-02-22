@@ -1,17 +1,18 @@
-from typing import Any, AsyncGenerator
+from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from ....utils import ConnectionDatabase
-from ..schemas import Base, YouthMembersSchema  # noqa: F401
-
+from .base import Base
 
 connection = ConnectionDatabase(base=Base)
 engine = connection.connect()
 
-SessionLocal: sessionmaker[AsyncSession] = sessionmaker(
-    class_=AsyncSession, expire_on_commit=False, bind=engine
-)
+SessionLocal: sessionmaker[AsyncSession] = sessionmaker(  # type: ignore
+    class_=AsyncSession,
+    expire_on_commit=False,
+    bind=engine,  # type: ignore
+)  # type: ignore
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
