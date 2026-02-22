@@ -1,6 +1,6 @@
-from typing import Any, Generator
+from typing import Any, AsyncGenerator
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.session import Session
 
 from ....utils import ConnectionDatabase
 from ..schemas import Base, YouthMembersSchema  # noqa: F401
@@ -8,16 +8,12 @@ from ..schemas import Base, YouthMembersSchema  # noqa: F401
 
 connection = ConnectionDatabase(base=Base)
 engine = connection.connect()
-connection.create_schema()
 
-SessionLocal: sessionmaker[Session] = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine
+SessionLocal: sessionmaker[AsyncSession] = sessionmaker(
+    class_=AsyncSession, expire_on_commit=False, bind=engine
 )
 
 
-def get_db(self) -> Generator[Session, Any, None]:
-    db: Session = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as session:
+        yield session

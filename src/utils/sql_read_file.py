@@ -27,15 +27,17 @@ class SqlReadFile:
             self.query = file.read()
         return self.query
 
-    def execute_query_sql(self, params: Optional[dict] = None) -> Any | dict[str, Any]:
+    async def execute_query_sql(
+        self, params: Optional[dict] = None
+    ) -> Any | dict[str, Any]:
 
         if not self.query:
             raise ValueError("Query is empty. Please read the SQL file first.")
 
-        with self.engine.connect() as connection:
+        async with self.engine.connect() as connection:
             try:
-                result: Any = connection.execute(text(self.query), params or {})
-                if result.return_rows:
+                result: Any = await connection.execute(text(self.query), params or {})
+                if result.returns_rows:
                     self.data = result.fetchall()
                     self.columns = result.keys()
                     return self.data

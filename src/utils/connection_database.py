@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.exc import OperationalError
 import time
 import os
@@ -15,7 +15,7 @@ class ConnectionDatabase:
 
         load_dotenv()
 
-    def initialize_engine(self) -> Engine:
+    def initialize_engine(self) -> AsyncEngine:
         db_host: str | None = os.getenv("DB_HOST")
         db_port: str | None = os.getenv("DB_PORT")
         db_user: str | None = os.getenv("DB_USER")
@@ -29,17 +29,16 @@ class ConnectionDatabase:
             )
 
         connection_string: str = (
-            f"postgresql+psycopg2://{db_user}:{db_host}@{db_pass}:{db_port}/{db_name}"
+            f"postgresql+asyncpg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
         )
-        return create_engine(url=connection_string)
+        return create_async_engine(url=connection_string)
 
-    def connect(self, max_retries: int = 5, wait_seconds: int = 2) -> Engine | None:
+    def connect(
+        self, max_retries: int = 5, wait_seconds: int = 2
+    ) -> AsyncEngine | None:
         for attempt in range(1, max_retries + 1):
             try:
-                self.engine: Engine = self.initialize_engine()
-
-                with self.engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
+                self.engine: AsyncEngine = self.initialize_engine()
                 return self.engine
 
             except OperationalError as e:
@@ -47,11 +46,11 @@ class ConnectionDatabase:
 
                 if attempt == max_retries:
                     raise Exception(
-                        f"Unable to connect to the database after {max_retries} attempts"
+                        f"Unable to create async engine after {max_retries} attempts"
                     )
                 time.sleep(wait_seconds * attempt)
 
-    def create_schema(self, max_retries: int = 5, wait_seconds: int = 5):
+    async def create_schema(self, max_retries: int = 5, wait_seconds: int = 5):
         if self.base is None:
             raise ValueError("The base model (declarative_base) was not provided.")
 
@@ -62,7 +61,8 @@ class ConnectionDatabase:
 
         for attempt in range(1, max_retries + 1):
             try:
-                self.base.metadata.create_all(bind=self.engine)  # type: ignore
+                async with self.engine.begin() as conn:  # type: ignore
+                    await conn.run_sync(self.base.metadata.create_all)
             except OperationalError as e:
                 print(f"Attempt {attempt}/{max_retries} failed: {e}")
                 if attempt == max_retries:
