@@ -1,4 +1,3 @@
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.exc import OperationalError
 import time
@@ -62,7 +61,7 @@ class ConnectionDatabase:
         for attempt in range(1, max_retries + 1):
             try:
                 async with self.engine.begin() as conn:  # type: ignore
-                    await conn.run_sync(self.base.metadata.create_all)
+                    await conn.run_sync(self.base.metadata.create_all)  # type: ignore
             except OperationalError as e:
                 print(f"Attempt {attempt}/{max_retries} failed: {e}")
                 if attempt == max_retries:
