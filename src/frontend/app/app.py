@@ -98,9 +98,11 @@ if not st.session_state.api_awake:
             st.session_state.api_awake = True
             st.session_state.api_attempts = 0
             placeholder.success("✅ Servidor Online!")
+            time.sleep(0.1)
+            placeholder.empty()
+            st.rerun()
         else:
             st.session_state.api_attempts += 1
-            # retry a few times automatically, then show manual retry
             if st.session_state.api_attempts < 3:
                 st.warning("😴 A API está acordando, tentando novamente...")
                 time.sleep(1)
@@ -109,7 +111,6 @@ if not st.session_state.api_awake:
                 st.error(
                     "❌ Não foi possível conectar com a API após múltiplas tentativas."
                 )
-                # show a helpful debug message
                 try:
                     if hasattr(response, "status_code"):
                         st.write(f"Status: {response.status_code}")  # type: ignore
@@ -146,6 +147,7 @@ with tab1:
             placeholder="(11) 94002-8922",
             help="Digite o número no formato (XX) XXXXX-XXXX",
         )
+        st.caption(":red[**Digite o Número de Telefone no formato (XX) XXXXX-XXXX**]")
 
         t_shirt = st.segmented_control(
             "Escolha o Tamanho da Camiseta",
@@ -230,6 +232,7 @@ with tab2:
         df_edited = pd.DataFrame(edited_members)
         df_edited = df_edited.rename(
             columns={
+                "id_member": "Código do Membro",
                 "member_name": "Nome",
                 "phone_number": "Número de Telefone",
                 "t_shirt": "Número da Camiseta",
@@ -238,7 +241,6 @@ with tab2:
                 "ministry_position": "Cargo Ministerial",
                 "date_birth": "Data de Nascimento",
                 "email": "E-mail",
-                "id_member": "Código do Membro",
             }
         )
         df_edited["Data de Nascimento"] = pd.to_datetime(

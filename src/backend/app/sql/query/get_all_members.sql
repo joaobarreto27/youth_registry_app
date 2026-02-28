@@ -11,4 +11,4 @@ SELECT
     create_date,
     update_date
 FROM youth_members
-ORDER BY create_date DESC;
+ORDER BY member_name;
