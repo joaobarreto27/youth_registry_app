@@ -20,6 +20,7 @@ class ConnectionDatabase:
         db_user: str | None = os.getenv("DB_USER")
         db_pass: str | None = os.getenv("DB_PASSWORD")
         db_name: str | None = os.getenv("DB_NAME")
+        db_ssl: str | None = os.getenv("DB_SSL")
 
         if not all([db_user, db_pass, db_name, db_host, db_port]):
             raise ValueError(
@@ -30,7 +31,10 @@ class ConnectionDatabase:
         connection_string: str = (
             f"postgresql+asyncpg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
         )
-        return create_async_engine(url=connection_string)
+        return create_async_engine(
+            url=connection_string,
+            connect_args={"ssl": "require"},
+        )
 
     def connect(
         self, max_retries: int = 5, wait_seconds: int = 2
