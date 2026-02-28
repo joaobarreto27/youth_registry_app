@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .engine_database import engine
+from .engine_database import engine, Base
 from .routes import router_register_members
 
 engine = engine
@@ -9,6 +9,12 @@ api = FastAPI(
     description="Sistema de cadastro de membros",
     version="1.0.0",
 )
+
+
+@api.on_event("startup")
+async def on_startup():
+    async with engine.begin() as conn:  # type: ignore
+        await conn.run_sync(Base.metadata.create_all)
 
 
 @api.get("/")

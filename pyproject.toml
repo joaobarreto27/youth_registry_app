@@ -27,6 +27,7 @@ requests = ">=2.32.5,<3.0.0"
 taskipy = "^1.14.1"
 asyncpg = "^0.31.0"
 greenlet = "^3.3.2"
+watchdog = "^6.0.0"
 
 [tool.taskipy.tasks]
 ci = "pre-commit run --all-files"

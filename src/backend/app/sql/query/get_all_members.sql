@@ -1,4 +1,6 @@
-SELECT member_name,
+SELECT
+    id_member,
+    member_name,
     phone_number,
     t_shirt,
     food_allergy,
