@@ -143,42 +143,42 @@ with tab1:
             "👤 Nome", placeholder="Digite o nome completo", key="criador_nome"
         )
         phone = st.text_input(
-            "Número de Telefone",
+            "📱 Número de Telefone",
             placeholder="(11) 94002-8922",
             help="Digite o número no formato (XX) XXXXX-XXXX",
         )
-        st.caption(":red[**Digite o Número de Telefone no formato (XX) XXXXX-XXXX**]")
+        st.caption("⚠️ :red[**Digite o Número de Telefone no formato (XX) XXXXX-XXXX**]")
 
         t_shirt = st.segmented_control(
-            "Escolha o Tamanho da Camiseta",
+            "👕 Escolha o Tamanho da Camiseta",
             ["PP", "P", "M", "G", "GG", "XG", "EG", "G1", "G2", "G3", "G4"],
             default=None,
         )
 
         food_allergy = st.selectbox(
-            "Alergia a Alimento",
+            "🥗 Alergia a Alimento",
             ["Sim", "Não"],
             index=None,
             placeholder="Selecione uma opção",
         )
 
         sower = st.selectbox(
-            "Semeador", ["Sim", "Não"], index=None, placeholder="Selecione uma opção"
+            "🌱 Semeador", ["Sim", "Não"], index=None, placeholder="Selecione uma opção"
         )
 
         ministry_position = st.selectbox(
-            "Cargo Ministerial",
+            "⛪ Cargo Ministerial",
             ["Sim", "Não"],
             index=None,
             placeholder="Selecione uma opção",
         )
 
         email = st.text_input(
-            "Digite Seu E-mail", placeholder="seu.email@exemplo.com", key="email"
+            "📧 Digite Seu E-mail", placeholder="seu.email@exemplo.com", key="email"
         )
 
         date_birth = st.date_input(
-            "Selecione a Data de Nascimento",
+            "📅 Selecione a Data de Nascimento",
             value=date.today(),
             min_value=date(1950, 1, 1),
             max_value=date(2050, 12, 1),
