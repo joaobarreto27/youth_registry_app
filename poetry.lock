@@ -2312,6 +2312,24 @@ sql = ["SQLAlchemy (>=2.0.0)"]
 starlette = ["anyio (>=4.0.0)", "itsdangerous (>=2.1.2)", "python-multipart (>=0.0.10)", "starlette (>=0.40.0)", "uvicorn (>=0.30.0)", "websockets (>=12.0.0)"]
 
 [[package]]
+name = "streamlit-cookies-controller"
+version = "0.0.4"
+description = "Streamlit cookies controller"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "streamlit-cookies-controller-0.0.4.tar.gz", hash = "sha256:f5df2543de858f1585dcb6e90f58f38aafbf313ee8e237c64663b2d9761583cc"},
+    {file = "streamlit_cookies_controller-0.0.4-py3-none-any.whl", hash = "sha256:f97fec6acdeee9cb9e16da25c3fc91d404b5b0ddced87c1d9fa9c62f65ca3251"},
+]
+
+[package.dependencies]
+streamlit = ">=0.63"
+
+[package.extras]
+devel = ["playwright (==1.39.0)", "pytest (==7.4.0)", "pytest-playwright-snapshot (==1.0)", "pytest-rerunfailures (==12.0)", "requests (==2.31.0)", "wheel"]
+
+[[package]]
 name = "taskipy"
 version = "1.14.1"
 description = "tasks runner for python projects"
@@ -2579,4 +2597,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12, <3.13"
-content-hash = "4ac2aa879ed2625bade3020afec0fa01f9b51f5cafdb8e40ec02844fb3a8a1ca"
+content-hash = "10d0eb54d09319b1c936190171c1daa1fff202cbb29ed45e39f571adf073304f"

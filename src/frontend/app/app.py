@@ -6,12 +6,15 @@ import pandas as pd
 import re
 from datetime import date
 import plotly.express as px
+from streamlit_cookies_controller import CookieController
 
-
+controller = CookieController()
 # ==================== CONFIGURAÇÃO DA PÁGINA ====================
 st.set_page_config(page_title="Sistema de Cadastro", page_icon="📋", layout="wide")
 
-API_URL = st.secrets.get("api_base_url", "http://localhost:8000") + "/registered/"
+BASE_URL = st.secrets.get("api_base_url", "http://localhost:8000")
+API_URL = f"{BASE_URL}/registered"
+AUTH_URL = f"{BASE_URL}/auth"
 
 st.header("📋 Sistema de Cadastro de Jovens AduPno")
 
@@ -20,11 +23,37 @@ tab1, tab2, tab3 = st.tabs(
 )
 
 
+# ==================== LOGIN =================================
+def login():
+    with st.form("login_form"):
+        username = st.text_input("Usuário")
+        password = st.text_input("Senha", type="password")
+        submit = st.form_submit_button("Entrar")
+
+        if submit:
+            payload = {"username": username, "password": password}
+            try:
+                response = requests.post(f"{AUTH_URL}/login", data=payload, timeout=30)
+
+                if response.status_code == 200:
+                    st.session_state["token"] = response.json().get("access_token")
+                    controller.set(
+                        "auth_token", st.session_state["token"], max_age=3600
+                    )
+                    st.success("Login realizado!")
+                    time.sleep(0.5)
+                    st.rerun()
+                else:
+                    st.error("Usuário ou senha inválidos.")
+            except Exception as e:
+                st.error(f"Erro ao conectar: {e}")
+
+
 # ==================== FUNÇÕES AUXILIARES ====================
 @st.cache_data(ttl=5)
 def list_all_members():
     try:
-        response = requests.get(f"{API_URL}", timeout=30)
+        response = requests.get(f"{API_URL}", headers=get_auth_header(), timeout=30)
         if response.status_code == 200:
             return response.json()
         return []
@@ -74,12 +103,22 @@ def validate_email(email):
 def check_api_healt():
     try:
         # quick timeout for health check to keep UI responsive
-        response = requests.get(API_URL.replace("/registered", "/"), timeout=5)
+        response = requests.get(
+            API_URL.replace("/registered", "/"), headers=get_auth_header(), timeout=5
+        )
         return response.status_code == 200, response
     except (ConnectionError, ConnectTimeout) as e:
         return False, e
     except Exception as e:
         return False, e
+
+
+def get_auth_header():
+    """Retorna o cabeçalho com o token se o usuário estiver logado."""
+    token = st.session_state.get("token")
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
 
 
 # ==================== VERIFICAÇÃO DE SAÚDE DA API ====================
@@ -126,418 +165,455 @@ if not st.session_state.api_awake:
                     time.sleep(0.2)
                     st.rerun()
 
+
 # ==================== INTERFACE STREAMLIT ====================
+def main():
+    if "token" not in st.session_state:
+        saved_token = controller.get("auth_token")
+        if saved_token:
+            st.session_state["token"] = saved_token
+            st.rerun()
 
-if "members" not in st.session_state:
-    st.session_state.members = list_all_members()
-members = st.session_state.members
+    if "token" not in st.session_state:
+        st.title("🔐 Login")
+        login()
+        st.stop()
 
-if not isinstance(members, list):
-    members = []
+    if "members" not in st.session_state:
+        st.session_state.members = list_all_members()
+    members = st.session_state.members
 
-# -------------------- COLUNA - CRIAR --------------------
-with tab1:
-    st.subheader("➕ Cadastrar Novo Jovem")
-    st.markdown("Insira as informações necessárias abaixo para cadastrar o Jovem!")
+    if not isinstance(members, list):
+        members = []
 
-    with st.form("form_create_member", clear_on_submit=True):
-        member_name = st.text_input(
-            "👤 Nome", placeholder="Digite o nome completo", key="criador_nome"
-        )
-        phone = st.text_input(
-            "📱 Número de Telefone",
-            placeholder="(11) 94002-8922",
-            help="Digite o número no formato (XX) XXXXX-XXXX",
-        )
-        st.caption("⚠️ :red[**Digite o Número de Telefone no formato (XX) XXXXX-XXXX**]")
+    # -------------------- COLUNA - CRIAR --------------------
+    with tab1:
+        st.subheader("➕ Cadastrar Novo Jovem")
+        st.markdown("Insira as informações necessárias abaixo para cadastrar o Jovem!")
 
-        t_shirt = st.segmented_control(
-            "👕 Escolha o Tamanho da Camiseta",
-            ["PP", "P", "M", "G", "GG", "XG", "EG", "G1", "G2", "G3", "G4"],
-            default=None,
-        )
-
-        food_allergy = st.selectbox(
-            "🥗 Alergia a Alimento",
-            ["Sim", "Não"],
-            index=None,
-            placeholder="Selecione uma opção",
-        )
-
-        sower = st.selectbox(
-            "🌱 Semeador", ["Sim", "Não"], index=None, placeholder="Selecione uma opção"
-        )
-
-        ministry_position = st.selectbox(
-            "⛪ Cargo Ministerial",
-            ["Sim", "Não"],
-            index=None,
-            placeholder="Selecione uma opção",
-        )
-
-        email = st.text_input(
-            "📧 Digite Seu E-mail", placeholder="seu.email@exemplo.com", key="email"
-        )
-
-        date_birth = st.date_input(
-            "📅 Selecione a Data de Nascimento",
-            value=date.today(),
-            min_value=date(1950, 1, 1),
-            max_value=date(2050, 12, 1),
-            format="DD/MM/YYYY",
-        )
-
-        submit = st.form_submit_button("🚀 Registrar Cadastro")
-        if submit:
-            # Validações
-            if not member_name.strip() or not phone.strip() or not email.strip():
-                st.error("❌ Preencha todos os campos obrigatórios")
-            elif not validate_phone(phone):
-                st.error("❌ Número de telefone inválido")
-            elif not validate_email(email):
-                st.error("❌ E-mail inválido")
-            else:
-                success, result = create_member_app(
-                    member_name,
-                    phone,
-                    t_shirt,
-                    food_allergy,
-                    sower,
-                    ministry_position,
-                    date_birth,
-                    email,
-                )
-                if success and result.status_code == 200:  # type: ignore
-                    st.success(f"✅ Jovem: **{member_name}** cadastrado com sucesso!")
-                    st.session_state.members = list_all_members()
-                    time.sleep(6)
-                    st.rerun()
-                elif success and result.status_code == 400:  # type: ignore
-                    try:
-                        detail = result.json().get("detail", "Erro desconhecido")  # type: ignore
-                    except Exception:
-                        detail = "Erro desconhecido"
-                    st.error(f"❌ Falha ao cadastrar **{member_name}**: {detail}")
-                else:
-                    st.error(
-                        f"❌ Erro inesperado: {result if not success else result.status_code}"  # type: ignore
-                    )
-
-# -------------------- EDITAR --------------------
-with tab2:
-    st.subheader("✏️ Editar Cadastro de Jovens")
-    edited_members = members.copy() if members else []
-
-    if not edited_members:
-        st.warning("⚠️ Nenhum jovem cadastrado ainda.")
-    else:
-        df_edited = pd.DataFrame(edited_members)
-        df_edited = df_edited.rename(
-            columns={
-                "id_member": "Código do Membro",
-                "member_name": "Nome",
-                "phone_number": "Telefone",
-                "t_shirt": "Camiseta",
-                "food_allergy": "Alergia Alimento",
-                "sower": "Semeador",
-                "ministry_position": "Cargo Ministerial",
-                "date_birth": "Data de Nascimento",
-                "email": "E-mail",
-            }
-        )
-        df_edited["Data de Nascimento"] = pd.to_datetime(
-            df_edited["Data de Nascimento"], format="%Y-%m-%d", errors="coerce"
-        )
-        expected_cols = [
-            "Nome",
-            "Telefone",
-            "Camiseta",
-            "Alergia Alimento",
-            "Semeador",
-            "Cargo Ministerial",
-            "Data de Nascimento",
-            "E-mail",
-            "Código do Membro",
-        ]
-        for c in expected_cols:
-            if c not in df_edited.columns:
-                df_edited[c] = pd.NA
-
-        df_edited = df_edited.reindex(columns=expected_cols)
-
-        df_edited["Código do Membro"] = pd.to_numeric(
-            df_edited["Código do Membro"], errors="coerce"
-        ).astype("Int64")
-
-        edited_df = st.data_editor(
-            df_edited,
-            num_rows="fixed",
-            width="content",
-            column_config={
-                "Número da Camiseta": st.column_config.SelectboxColumn(
-                    options=[
-                        "PP",
-                        "P",
-                        "M",
-                        "G",
-                        "GG",
-                        "XG",
-                        "EG",
-                        "G1",
-                        "G2",
-                        "G3",
-                        "G4",
-                    ]
-                ),
-                "Alergia Alimento": st.column_config.SelectboxColumn(
-                    options=["Sim", "Não"]
-                ),
-                "Semeador": st.column_config.SelectboxColumn(options=["Sim", "Não"]),
-                "Cargo Ministerial": st.column_config.SelectboxColumn(
-                    options=["Sim", "Não"]
-                ),
-                "Data de Nascimento": st.column_config.DateColumn(),
-                "E-mail": st.column_config.TextColumn(),
-                "Número de Telefone": st.column_config.TextColumn(),
-                "Nome": st.column_config.TextColumn(),
-                "Código do Membro": st.column_config.TextColumn(disabled=True),
-            },
-        )
-
-        with st.form("form_update_members"):
-            st.write("💾 Atualizar Cadastro Membro")
-            submit_update = st.form_submit_button("✅ Salvar alterações")
-
-            if submit_update:
-                errors = []
-                updated_members = []
-
-                for idx, row in edited_df.iterrows():
-                    id_member = row["Código do Membro"]
-                    if pd.isna(id_member):
-                        continue
-
-                    original_row = df_edited.loc[idx]  # type: ignore
-                    changed = False
-                    payload = {}
-
-                    for df_col, payload_key in [
-                        ("Nome", "member_name"),
-                        ("Número de Telefone", "phone_number"),
-                        ("Número da Camiseta", "t_shirt"),
-                        ("Alergia Alimento", "food_allergy"),
-                        ("Semeador", "sower"),
-                        ("Cargo Ministerial", "ministry_position"),
-                        ("Data de Nascimento", "date_birth"),
-                        ("E-mail", "email"),
-                    ]:
-                        old_val = original_row[df_col]
-                        new_val = row[df_col]
-
-                        if df_col == "Data de Nascimento" and pd.notna(new_val):
-                            new_val_str = new_val.strftime("%Y-%m-%d")
-                            old_val_str = (
-                                pd.to_datetime(old_val).strftime("%Y-%m-%d")
-                                if pd.notna(old_val)
-                                else None
-                            )
-                            if new_val_str != old_val_str:
-                                payload[payload_key] = new_val_str
-                                changed = True
-                        else:
-                            if new_val != old_val:
-                                payload[payload_key] = new_val
-                                changed = True
-
-                    if changed:
-                        try:
-                            response = requests.put(
-                                f"{API_URL}{int(id_member)}", json=payload, timeout=30
-                            )
-                            if response.status_code == 200:
-                                updated_members.append(row["Nome"])
-                            else:
-                                errors.append(f"{row['Nome']}: {response.text}")
-                        except Exception as e:
-                            errors.append(f"{row['Nome']}: {str(e)}")
-
-                if errors:
-                    st.error("❌ Erros ao atualizar membros:\n" + "\n".join(errors))
-                if updated_members:
-                    list_members_edited = ", ".join(updated_members)
-                    st.success(
-                        f"✅ Cadastro dos jovens: **{list_members_edited}** atualizados com sucesso!"
-                    )
-                    st.session_state.members = list_all_members()
-                    time.sleep(6)
-                    st.rerun()
-
-        # ---------- Form para deletar ----------
-        st.subheader("🗑️ Deletar Cadastro de Jovens")
-        with st.form("form_delete_members"):
-            rows_to_delete = st.multiselect(
-                "Selecione códigos para deletar o cadastro dos jovens",
-                edited_df["Código do Membro"],
-                placeholder="Escolha os códigos dos jovens que deseja excluir.",
+        with st.form("form_create_member", clear_on_submit=True):
+            member_name = st.text_input(
+                "👤 Nome", placeholder="Digite o nome completo", key="criador_nome"
             )
-            submit_delete = st.form_submit_button("✅ Deletar Selecionados")
+            phone = st.text_input(
+                "📱 Número de Telefone",
+                placeholder="(11) 94002-8922",
+                help="Digite o número no formato (XX) XXXXX-XXXX",
+            )
+            st.caption(
+                "⚠️ :red[**Digite o Número de Telefone no formato (XX) XXXXX-XXXX**]"
+            )
 
-            members_deleted = []
+            t_shirt = st.segmented_control(
+                "👕 Escolha o Tamanho da Camiseta",
+                ["PP", "P", "M", "G", "GG", "XG", "EG", "G1", "G2", "G3", "G4"],
+                default=None,
+            )
 
-            if submit_delete:
-                for id_member in rows_to_delete:
-                    filtered = edited_df.loc[
-                        edited_df["Código do Membro"] == id_member, "Nome"
-                    ]
-                    if not filtered.empty:  # type: ignore
-                        members_deleted.append(filtered.values[0])  # type: ignore
-                    requests.delete(f"{API_URL}{int(id_member)}", timeout=30)
+            food_allergy = st.selectbox(
+                "🥗 Alergia a Alimento",
+                ["Sim", "Não"],
+                index=None,
+                placeholder="Selecione uma opção",
+            )
 
-                if members_deleted:
-                    list_members_deleted = ", ".join(members_deleted)
-                    st.success(f"✅ Jovens: {list_members_deleted} excluídos!")
-                    st.cache_data.clear()
+            sower = st.selectbox(
+                "🌱 Semeador",
+                ["Sim", "Não"],
+                index=None,
+                placeholder="Selecione uma opção",
+            )
 
-                st.session_state.members = list_all_members()
-                time.sleep(6)
-                st.rerun()
+            ministry_position = st.selectbox(
+                "⛪ Cargo Ministerial",
+                ["Sim", "Não"],
+                index=None,
+                placeholder="Selecione uma opção",
+            )
 
+            email = st.text_input(
+                "📧 Digite Seu E-mail", placeholder="seu.email@exemplo.com", key="email"
+            )
 
-# -------------------- TABELA DE JOVENS --------------------
-with tab3:
-    st.subheader("📊 Dashboard de Jovens Cadastrados")
+            date_birth = st.date_input(
+                "📅 Selecione a Data de Nascimento",
+                value=date.today(),
+                min_value=date(1950, 1, 1),
+                max_value=date(2050, 12, 1),
+                format="DD/MM/YYYY",
+            )
 
-    members = members if members is not None else []
+            submit = st.form_submit_button("🚀 Registrar Cadastro")
+            if submit:
+                # Validações
+                if not member_name.strip() or not phone.strip() or not email.strip():
+                    st.error("❌ Preencha todos os campos obrigatórios")
+                elif not validate_phone(phone):
+                    st.error("❌ Número de telefone inválido")
+                elif not validate_email(email):
+                    st.error("❌ E-mail inválido")
+                else:
+                    success, result = create_member_app(
+                        member_name,
+                        phone,
+                        t_shirt,
+                        food_allergy,
+                        sower,
+                        ministry_position,
+                        date_birth,
+                        email,
+                    )
+                    if success and result.status_code == 200:  # type: ignore
+                        st.success(
+                            f"✅ Jovem: **{member_name}** cadastrado com sucesso!"
+                        )
+                        st.session_state.members = list_all_members()
+                        time.sleep(6)
+                        st.rerun()
+                    elif success and result.status_code == 400:  # type: ignore
+                        try:
+                            detail = result.json().get("detail", "Erro desconhecido")  # type: ignore
+                        except Exception:
+                            detail = "Erro desconhecido"
+                        st.error(f"❌ Falha ao cadastrar **{member_name}**: {detail}")
+                    else:
+                        st.error(
+                            f"❌ Erro inesperado: {result if not success else result.status_code}"  # type: ignore
+                        )
 
-    if members:
-        df = pd.DataFrame(members)
-        if "member_name" in df.columns:
-            df = df.rename(
+    # -------------------- EDITAR --------------------
+    with tab2:
+        st.subheader("✏️ Editar Cadastro de Jovens")
+        edited_members = members.copy() if members else []
+
+        if not edited_members:
+            st.warning("⚠️ Nenhum jovem cadastrado ainda.")
+        else:
+            df_edited = pd.DataFrame(edited_members)
+            df_edited = df_edited.rename(
                 columns={
+                    "id_member": "Código do Membro",
                     "member_name": "Nome",
                     "phone_number": "Telefone",
                     "t_shirt": "Camiseta",
-                    "food_allergy": "Alergia",
+                    "food_allergy": "Alergia Alimento",
                     "sower": "Semeador",
-                    "ministry_position": "Cargo",
-                    "date_birth": "Nascimento",
-                    "email": "Email",
-                    "id_member": "ID",
+                    "ministry_position": "Cargo Ministerial",
+                    "date_birth": "Data de Nascimento",
+                    "email": "E-mail",
                 }
             )
+            df_edited["Data de Nascimento"] = pd.to_datetime(
+                df_edited["Data de Nascimento"], format="%Y-%m-%d", errors="coerce"
+            )
+            expected_cols = [
+                "Nome",
+                "Telefone",
+                "Camiseta",
+                "Alergia Alimento",
+                "Semeador",
+                "Cargo Ministerial",
+                "Data de Nascimento",
+                "E-mail",
+                "Código do Membro",
+            ]
+            for c in expected_cols:
+                if c not in df_edited.columns:
+                    df_edited[c] = pd.NA
 
-            st.markdown("### 🎛️ Filtros")
+            df_edited = df_edited.reindex(columns=expected_cols)
 
-            col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
+            df_edited["Código do Membro"] = pd.to_numeric(
+                df_edited["Código do Membro"], errors="coerce"
+            ).astype("Int64")
 
-            with col_f1:
-                semeador_sel = st.multiselect(
-                    "Semeador",
-                    options=sorted(df["Semeador"].dropna().unique()),
-                    default=sorted(df["Semeador"].dropna().unique()),
-                    placeholder="Selecione uma opção",
-                )
-
-            df["Nascimento"] = pd.to_datetime(df["Nascimento"], errors="coerce")
-            today = pd.Timestamp.today()
-            df["Idade"] = (today - df["Nascimento"]).dt.days // 365
-
-            df["Alergia"] = df["Alergia"].fillna("Nenhuma")
-            df["Cargo"] = df["Cargo"].fillna("Não informado")
-            df["Camiseta"] = df["Camiseta"].fillna("Não informado")
-
-            df_filtrado = df[(df["Semeador"].isin(semeador_sel))]
-
-            col1, col2 = st.columns(2)
-
-            col1.metric("Total de Jovens Cadastrados", len(df_filtrado))
-            idade_media = df_filtrado["Idade"].mean()
-
-            col2.metric(
-                "Idade Média",
-                f"{idade_media:.1f} anos" if not pd.isna(idade_media) else "N/A",
+            edited_df = st.data_editor(
+                df_edited,
+                num_rows="fixed",
+                width="content",
+                column_config={
+                    "Camiseta": st.column_config.SelectboxColumn(
+                        options=[
+                            "PP",
+                            "P",
+                            "M",
+                            "G",
+                            "GG",
+                            "XG",
+                            "EG",
+                            "G1",
+                            "G2",
+                            "G3",
+                            "G4",
+                        ]
+                    ),
+                    "Alergia Alimento": st.column_config.SelectboxColumn(
+                        options=["Sim", "Não"]
+                    ),
+                    "Semeador": st.column_config.SelectboxColumn(
+                        options=["Sim", "Não"]
+                    ),
+                    "Cargo Ministerial": st.column_config.SelectboxColumn(
+                        options=["Sim", "Não"]
+                    ),
+                    "Data de Nascimento": st.column_config.DateColumn(),
+                    "E-mail": st.column_config.TextColumn(),
+                    "Telefone": st.column_config.TextColumn(),
+                    "Nome": st.column_config.TextColumn(),
+                    "Código do Membro": st.column_config.TextColumn(disabled=True),
+                },
             )
 
-            col4, col5, col6 = st.columns(3)
+            with st.form("form_update_members"):
+                st.write("💾 Atualizar Cadastro Membro")
+                submit_update = st.form_submit_button("✅ Salvar alterações")
 
-            with col4:
-                semeadores = df_filtrado["Semeador"].value_counts().reset_index()
-                semeadores.columns = ["Semeador", "Total"]
+                if submit_update:
+                    errors = []
+                    updated_members = []
 
-                fig3 = px.bar(
-                    semeadores,
-                    x="Semeador",
-                    y="Total",
-                    title="Semeadores",
-                    text="Total",
+                    for idx, row in edited_df.iterrows():
+                        id_member = row["Código do Membro"]
+                        if pd.isna(id_member):
+                            continue
+
+                        original_row = df_edited.loc[idx]  # type: ignore
+                        changed = False
+                        payload = {}
+
+                        for df_col, payload_key in [
+                            ("Nome", "member_name"),
+                            ("Telefone", "phone_number"),
+                            ("Camiseta", "t_shirt"),
+                            ("Alergia Alimento", "food_allergy"),
+                            ("Semeador", "sower"),
+                            ("Cargo Ministerial", "ministry_position"),
+                            ("Data de Nascimento", "date_birth"),
+                            ("E-mail", "email"),
+                        ]:
+                            old_val = original_row[df_col]
+                            new_val = row[df_col]
+
+                            if df_col == "Data de Nascimento" and pd.notna(new_val):
+                                new_val_str = new_val.strftime("%Y-%m-%d")
+                                old_val_str = (
+                                    pd.to_datetime(old_val).strftime("%Y-%m-%d")
+                                    if pd.notna(old_val)
+                                    else None
+                                )
+                                if new_val_str != old_val_str:
+                                    payload[payload_key] = new_val_str
+                                    changed = True
+                            else:
+                                if new_val != old_val:
+                                    payload[payload_key] = new_val
+                                    changed = True
+
+                        if changed:
+                            try:
+                                response = requests.put(
+                                    f"{API_URL}/{int(id_member)}",
+                                    json=payload,
+                                    timeout=30,
+                                )
+                                if response.status_code == 200:
+                                    updated_members.append(row["Nome"])
+                                else:
+                                    errors.append(f"{row['Nome']}: {response.text}")
+                            except Exception as e:
+                                errors.append(f"{row['Nome']}: {str(e)}")
+
+                    if errors:
+                        st.error("❌ Erros ao atualizar membros:\n" + "\n".join(errors))
+                    if updated_members:
+                        list_members_edited = ", ".join(updated_members)
+                        st.success(
+                            f"✅ Cadastro do(s) joven(s): **{list_members_edited}** atualizados com sucesso!"
+                        )
+                        st.session_state.members = list_all_members()
+                        time.sleep(6)
+                        st.rerun()
+
+            # ---------- Form para deletar ----------
+            st.subheader("🗑️ Deletar Cadastro de Jovens")
+            with st.form("form_delete_members"):
+                rows_to_delete = st.multiselect(
+                    "Selecione códigos para deletar o cadastro dos jovens",
+                    edited_df["Código do Membro"],
+                    placeholder="Escolha os códigos dos jovens que deseja excluir.",
                 )
-                st.plotly_chart(fig3, use_container_width=True)
+                submit_delete = st.form_submit_button("✅ Deletar Selecionados")
 
-            with col5:
-                camisetas = df_filtrado["Camiseta"].value_counts().reset_index()
-                camisetas.columns = ["Camiseta", "Total"]
+                members_deleted = []
 
-                fig1 = px.bar(
-                    camisetas, x="Camiseta", y="Total", title="Camisetas", text="Total"
-                )
-                st.plotly_chart(fig1, use_container_width=True)
+                if submit_delete:
+                    for id_member in rows_to_delete:
+                        filtered = edited_df.loc[
+                            edited_df["Código do Membro"] == id_member, "Nome"
+                        ]
+                        if not filtered.empty:  # type: ignore
+                            members_deleted.append(filtered.values[0])  # type: ignore
+                        requests.delete(
+                            f"{API_URL}/{int(id_member)}",
+                            headers=get_auth_header(),
+                            timeout=30,
+                        )
 
-            with col6:
-                cargos = df_filtrado["Cargo"].value_counts().reset_index()
-                cargos.columns = ["Cargo", "Total"]
+                    if members_deleted:
+                        list_members_deleted = ", ".join(members_deleted)
+                        st.success(
+                            f"✅ Joven(s): **{list_members_deleted}** excluídos!"
+                        )
+                        st.cache_data.clear()
 
-                fig3 = px.bar(
-                    cargos,
-                    x="Cargo",
-                    y="Total",
-                    title="Cargos Ministeriais",
-                    text="Total",
-                )
-                st.plotly_chart(fig3, use_container_width=True)
+                    st.session_state.members = list_all_members()
+                    time.sleep(6)
+                    st.rerun()
 
-            col7, col8 = st.columns(2)
+    # -------------------- TABELA DE JOVENS --------------------
+    with tab3:
+        st.subheader("📊 Dashboard de Jovens Cadastrados")
 
-            with col7:
-                alergias = df_filtrado["Alergia"].value_counts().reset_index()
-                cargos.columns = ["Alergia", "Total"]
+        members = members if members is not None else []
 
-                fig3 = px.bar(
-                    cargos,
-                    x="Alergia",
-                    y="Total",
-                    title="Jovens com Alergia a Alimento",
-                    text="Total",
-                )
-                st.plotly_chart(fig3, use_container_width=True)
-
-            with col8:
-                fig4 = px.histogram(
-                    df_filtrado,
-                    x="Idade",
-                    nbins=10,
-                    title="Distribuição de Idade",
-                )
-
-                fig4.update_traces(
-                    texttemplate="%{y}",
-                    textposition="outside",
-                    marker_line_width=1,
-                    marker_line_color="white",
+        if members:
+            df = pd.DataFrame(members)
+            if "member_name" in df.columns:
+                df = df.rename(
+                    columns={
+                        "member_name": "Nome",
+                        "phone_number": "Telefone",
+                        "t_shirt": "Camiseta",
+                        "food_allergy": "Alergia",
+                        "sower": "Semeador",
+                        "ministry_position": "Cargo",
+                        "date_birth": "Nascimento",
+                        "email": "Email",
+                        "id_member": "ID",
+                    }
                 )
 
-                fig4.update_layout(
-                    bargap=0.1,
-                    xaxis_title="Idade",
-                    yaxis_title="Quantidade",
-                    plot_bgcolor="rgba(0,0,0,0)",
+                st.markdown("### 🎛️ Filtros")
+
+                col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
+
+                with col_f1:
+                    semeador_sel = st.multiselect(
+                        "Semeador",
+                        options=sorted(df["Semeador"].dropna().unique()),
+                        default=sorted(df["Semeador"].dropna().unique()),
+                        placeholder="Selecione uma opção",
+                    )
+
+                df["Nascimento"] = pd.to_datetime(df["Nascimento"], errors="coerce")
+                today = pd.Timestamp.today()
+                df["Idade"] = (today - df["Nascimento"]).dt.days // 365
+
+                df["Alergia"] = df["Alergia"].fillna("Nenhuma")
+                df["Cargo"] = df["Cargo"].fillna("Não informado")
+                df["Camiseta"] = df["Camiseta"].fillna("Não informado")
+
+                df_filtrado = df[(df["Semeador"].isin(semeador_sel))]
+
+                col1, col2 = st.columns(2)
+
+                col1.metric("Jovens Cadastrados", len(df_filtrado))
+                idade_media = df_filtrado["Idade"].mean()
+
+                col2.metric(
+                    "Idade Média",
+                    f"{idade_media:.1f} anos" if not pd.isna(idade_media) else "N/A",
                 )
 
-                st.plotly_chart(fig4, use_container_width=True)
+                col4, col5, col6 = st.columns(3)
 
-            st.subheader("Dados completos")
-            st.dataframe(df_filtrado)
+                with col4:
+                    semeadores = df_filtrado["Semeador"].value_counts().reset_index()
+                    semeadores.columns = ["Semeador", "Total"]
 
+                    fig3 = px.bar(
+                        semeadores,
+                        x="Semeador",
+                        y="Total",
+                        title="Semeadores",
+                        text="Total",
+                    )
+                    st.plotly_chart(fig3, use_container_width=True)
+
+                with col5:
+                    camisetas = df_filtrado["Camiseta"].value_counts().reset_index()
+                    camisetas.columns = ["Camiseta", "Total"]
+
+                    fig1 = px.bar(
+                        camisetas,
+                        x="Camiseta",
+                        y="Total",
+                        title="Camisetas",
+                        text="Total",
+                    )
+                    st.plotly_chart(fig1, use_container_width=True)
+
+                with col6:
+                    cargos = df_filtrado["Cargo"].value_counts().reset_index()
+                    cargos.columns = ["Cargo", "Total"]
+
+                    fig3 = px.bar(
+                        cargos,
+                        x="Cargo",
+                        y="Total",
+                        title="Cargos Ministeriais",
+                        text="Total",
+                    )
+                    st.plotly_chart(fig3, use_container_width=True)
+
+                col7, col8 = st.columns(2)
+
+                with col7:
+                    alergias = df_filtrado["Alergia"].value_counts().reset_index()
+                    alergias.columns = ["Alergia", "Total"]
+
+                    fig3 = px.bar(
+                        alergias,
+                        x="Alergia",
+                        y="Total",
+                        title="Jovens com Alergia a Alimento",
+                        text="Total",
+                    )
+                    st.plotly_chart(fig3, use_container_width=True)
+
+                with col8:
+                    fig4 = px.histogram(
+                        df_filtrado,
+                        x="Idade",
+                        nbins=10,
+                        title="Distribuição de Idade",
+                    )
+
+                    fig4.update_traces(
+                        texttemplate="%{y}",
+                        textposition="inside",
+                        insidetextanchor="end",
+                        marker_line_width=1,
+                        marker_line_color="white",
+                    )
+
+                    fig4.update_layout(
+                        bargap=0.1,
+                        xaxis_title="Idade",
+                        yaxis_title="Quantidade",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                    )
+
+                    st.plotly_chart(fig4, use_container_width=True)
+
+                st.subheader("Dados completos")
+                st.dataframe(df_filtrado)
+
+            else:
+                st.error("❌ Erro no formato dos dados de cadastro dos Jovens")
         else:
-            st.error("❌ Erro no formato dos dados de cadastro dos Jovens")
-    else:
-        st.warning("⚠️ Aguardando primeiro cadastro")
+            st.warning("⚠️ Aguardando primeiro cadastro")
+
+
+if __name__ == "__main__":
+    main()
