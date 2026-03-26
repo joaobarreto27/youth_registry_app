@@ -9,4 +9,4 @@ pinned: false
 
 # Youth Registration Backend
 
-API desenvolvida com FastAPI para registro em jovens.
+API desenvolvida com FastAPI para registro de cadastro dos jovens adupno.
