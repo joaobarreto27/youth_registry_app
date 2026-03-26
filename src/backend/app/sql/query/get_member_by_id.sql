@@ -1,5 +1,6 @@
 SELECT id_member,
     member_name,
+    gender,
     phone_number,
     t_shirt,
     food_allergy,

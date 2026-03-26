@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 
 class YouthMembersBase(BaseModel):
     member_name: str = Field(..., min_length=3, max_length=255)
+    gender: str = Field(..., min_length=1, max_length=10)
     phone_number: str = Field(..., min_length=10, max_length=15)
     t_shirt: str = Field(..., min_length=1, max_length=2)
     food_allergy: str = Field(..., min_length=1, max_length=3)
@@ -30,6 +31,14 @@ class YouthMembersBase(BaseModel):
             raise ValueError("Value must be 'Sim' or 'Não'")
         return value
 
+    @field_validator("gender")
+    @classmethod
+    def validate_gender(cls, value):
+        allowed_genders = {"Masculino", "Feminino"}
+        if value not in allowed_genders:
+            raise ValueError("Invalid gender")
+        return value
+
 
 class YouthMemberCreate(YouthMembersBase):
     pass
@@ -44,6 +53,7 @@ class YouthMemberResponse(YouthMembersBase):
 
 class YouthMemberUpdate(BaseModel):
     member_name: Optional[str] = Field(default=None, min_length=3, max_length=255)
+    gender: Optional[str] = Field(default=None, min_length=1, max_length=10)
     phone_number: Optional[str] = Field(default=None, min_length=10, max_length=15)
     t_shirt: Optional[str] = Field(default=None, min_length=1, max_length=2)
     food_allergy: Optional[str] = Field(default=None, min_length=1, max_length=3)
@@ -72,6 +82,17 @@ class YouthMemberUpdate(BaseModel):
         allowed = {"Sim", "Não"}
         if value not in allowed:
             raise ValueError("Value must be 'Sim' or 'Não'")
+        return value
+
+    @field_validator("gender")
+    @classmethod
+    def validate_gender(cls, value):
+        if value is None:
+            return value
+
+        allowed_genders = {"Masculino", "Feminino"}
+        if value not in allowed_genders:
+            raise ValueError("Invalid gender")
         return value
 
     @model_validator(mode="after")

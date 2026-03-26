@@ -29,6 +29,9 @@ async def create_member(
             detail="Nome do membro não pode estar vazio!",
         )
 
+    if member.gender not in ["Masculino", "Feminino"]:
+        raise HTTPException(status_code=400, detail="Gênero não pode estar vazio!")
+
     if not member.phone_number or len(member.phone_number.strip()) == 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

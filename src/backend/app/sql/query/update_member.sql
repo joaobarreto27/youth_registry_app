@@ -1,6 +1,7 @@
 UPDATE youth_members
 SET
     member_name      = COALESCE(:member_name, member_name),
+    gender           = COALESCE(:gender, gender),
     phone_number     = COALESCE(:phone_number, phone_number),
     t_shirt          = COALESCE(:t_shirt, t_shirt),
     food_allergy     = COALESCE(:food_allergy, food_allergy),
@@ -13,6 +14,7 @@ WHERE id_member = :id_member
 RETURNING
     id_member,
     member_name,
+    gender,
     phone_number,
     t_shirt,
     food_allergy,

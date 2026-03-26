@@ -1,5 +1,6 @@
 INSERT INTO youth_members (
     member_name,
+    gender,
     phone_number,
     t_shirt,
     food_allergy,
@@ -9,6 +10,7 @@ INSERT INTO youth_members (
     email
     )
 VALUES (:member_name,
+    gender,
     phone_number,
     t_shirt,
     food_allergy,
@@ -16,4 +18,4 @@ VALUES (:member_name,
     ministry_position,
     date_birth,
     email)
-RETURNING id_member,member_name, phone_number, t_shirt, food_allergy, sower, ministry_position, date_birth, email, create_date, update_date;
+RETURNING id_member, member_name, gender, phone_number, t_shirt, food_allergy, sower, ministry_position, date_birth, email, create_date, update_date;
