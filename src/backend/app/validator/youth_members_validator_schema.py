@@ -16,6 +16,7 @@ class YouthMembersBase(BaseModel):
     @field_validator("t_shirt")
     @classmethod
     def validate_t_shirt(cls, value):
+        value = value.strip().upper()
         allowed_sizes = {"PP", "P", "M", "G", "GG", "XG", "EG", "G1", "G2", "G3", "G4"}
         if value not in allowed_sizes:
             raise ValueError("Invalid t-shirt size")

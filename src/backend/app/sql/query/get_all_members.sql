@@ -1,4 +1,6 @@
-SELECT member_name,
+SELECT
+    id_member,
+    member_name,
     phone_number,
     t_shirt,
     food_allergy,
@@ -9,4 +11,4 @@ SELECT member_name,
     create_date,
     update_date
 FROM youth_members
-ORDER BY create_date DESC;
+ORDER BY member_name;

@@ -1,4 +1,7 @@
+from math import e
 from pathlib import Path
+
+from sqlalchemy.exc import IntegrityError
 
 from ..engine_database import engine
 from ..schemas import YouthMembersSchema
@@ -70,14 +73,24 @@ async def create_member(
     if not member.email:
         raise HTTPException(status_code=400, detail="Email não pode estar vazio!")
 
-    member = YouthMembersSchema(**member.model_dump())
+    member = YouthMembersSchema(**member.model_dump())  # type: ignore
 
-    if commit:
-        db.add(member)
-        await db.commit()
-        await db.refresh(member)
+    try:
+        if commit:
+            db.add(member)
+            await db.commit()
+            await db.refresh(member)
 
-    return member
+        return member  # type: ignore
+    except IntegrityError as e:
+        if "pk_member_composite" in str(e.orig):
+            await db.rollback()
+            raise HTTPException(
+                status_code=400, detail="Este membro já está cadastrado."
+            )
+        else:
+            await db.rollback()
+            raise e
 
 
 async def delete_member(db: AsyncSession, id_member: int, commit: bool = True):
@@ -115,7 +128,7 @@ async def get_all_members(db: AsyncSession):
     if not rows:
         raise HTTPException(status_code=404, detail="Não há membro cadastrados")
 
-    return [YouthMemberResponse.model_validate(row).model_dump() for row in rows]
+    return [YouthMemberResponse(**dict(row._mapping)) for row in rows]  # type: ignore
 
 
 async def get_participant_by_id(db: AsyncSession, id_member: int):
@@ -147,8 +160,8 @@ async def update_member(
     if not params:
         raise HTTPException(status_code=400, detail="Escolha um campo para alterar")
 
+    params = member_update.model_dump(exclude_unset=False)
     params["id_member"] = id_member
-
     result = await db.execute(text(update_member_query), params=params)
 
     row = result.mappings().first()
