@@ -18,10 +18,6 @@ AUTH_URL = f"{BASE_URL}/auth"
 
 st.header("📋 Sistema de Cadastro de Jovens AduPno")
 
-tab1, tab2, tab3 = st.tabs(
-    ["Cadastrar Jovem", "Editar Cadastro", "Indicadores de Cadastro"]
-)
-
 
 # ==================== LOGIN =================================
 def login():
@@ -175,6 +171,7 @@ def main():
             st.rerun()
 
     if "token" not in st.session_state:
+        st.divider()
         st.title("🔐 Login")
         login()
         st.stop()
@@ -186,8 +183,13 @@ def main():
     if not isinstance(members, list):
         members = []
 
+    menu = st.sidebar.radio(
+        "Selecione uma opção:",
+        ["Cadastrar Jovem", "Editar Cadastro", "Indicadores de Cadastro"],
+    )
     # -------------------- COLUNA - CRIAR --------------------
-    with tab1:
+    if menu == "Cadastrar Jovem":
+        st.divider()
         st.subheader("➕ Cadastrar Novo Jovem")
         st.markdown("Insira as informações necessárias abaixo para cadastrar o Jovem!")
 
@@ -282,7 +284,8 @@ def main():
                         )
 
     # -------------------- EDITAR --------------------
-    with tab2:
+    elif menu == "Editar Cadastro":
+        st.divider()
         st.subheader("✏️ Editar Cadastro de Jovens")
         edited_members = members.copy() if members else []
 
@@ -435,6 +438,7 @@ def main():
                         st.rerun()
 
             # ---------- Form para deletar ----------
+            st.divider()
             st.subheader("🗑️ Deletar Cadastro de Jovens")
             with st.form("form_delete_members"):
                 rows_to_delete = st.multiselect(
@@ -471,7 +475,8 @@ def main():
                     st.rerun()
 
     # -------------------- TABELA DE JOVENS --------------------
-    with tab3:
+    elif menu == "Indicadores de Cadastro":
+        st.divider()
         st.subheader("📊 Dashboard de Jovens Cadastrados")
 
         members = members if members is not None else []
@@ -493,9 +498,10 @@ def main():
                     }
                 )
 
+                st.divider()
                 st.markdown("### 🎛️ Filtros")
 
-                col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
+                col_f1, col_f2, col_f3 = st.columns(3)
 
                 with col_f1:
                     semeador_sel = st.multiselect(
@@ -505,6 +511,7 @@ def main():
                         placeholder="Selecione uma opção",
                     )
 
+                st.divider()
                 df["Nascimento"] = pd.to_datetime(df["Nascimento"], errors="coerce")
                 today = pd.Timestamp.today()
                 df["Idade"] = (today - df["Nascimento"]).dt.days // 365
@@ -517,11 +524,11 @@ def main():
 
                 col1, col2 = st.columns(2)
 
-                col1.metric("Jovens Cadastrados", len(df_filtrado))
+                col1.metric("👥 Jovens Cadastrados", len(df_filtrado))
                 idade_media = df_filtrado["Idade"].mean()
 
                 col2.metric(
-                    "Idade Média",
+                    "🎂 Idade Média",
                     f"{idade_media:.1f} anos" if not pd.isna(idade_media) else "N/A",
                 )
 
@@ -535,7 +542,7 @@ def main():
                         semeadores,
                         x="Semeador",
                         y="Total",
-                        title="Semeadores",
+                        title="🌱 Semeadores",
                         text="Total",
                     )
                     st.plotly_chart(fig3, use_container_width=True)
@@ -548,7 +555,7 @@ def main():
                         camisetas,
                         x="Camiseta",
                         y="Total",
-                        title="Camisetas",
+                        title="👕 Camisetas",
                         text="Total",
                     )
                     st.plotly_chart(fig1, use_container_width=True)
@@ -561,7 +568,7 @@ def main():
                         cargos,
                         x="Cargo",
                         y="Total",
-                        title="Cargos Ministeriais",
+                        title="⛪ Cargos Ministeriais",
                         text="Total",
                     )
                     st.plotly_chart(fig3, use_container_width=True)
@@ -576,7 +583,7 @@ def main():
                         alergias,
                         x="Alergia",
                         y="Total",
-                        title="Jovens com Alergia a Alimento",
+                        title="🥗 Jovens com Alergia a Alimento",
                         text="Total",
                     )
                     st.plotly_chart(fig3, use_container_width=True)
@@ -586,7 +593,7 @@ def main():
                         df_filtrado,
                         x="Idade",
                         nbins=10,
-                        title="Distribuição de Idade",
+                        title="📅 Faixa Etária",
                     )
 
                     fig4.update_traces(
@@ -606,7 +613,7 @@ def main():
 
                     st.plotly_chart(fig4, use_container_width=True)
 
-                st.subheader("Dados completos")
+                st.subheader("👥 Dados completos")
                 st.dataframe(df_filtrado)
 
             else:
