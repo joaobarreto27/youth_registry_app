@@ -5,6 +5,8 @@ from requests.exceptions import ConnectionError, ConnectTimeout
 import pandas as pd
 import re
 from datetime import date
+import plotly.express as px
+
 
 # ==================== CONFIGURAÇÃO DA PÁGINA ====================
 st.set_page_config(page_title="Sistema de Cadastro", page_icon="📋", layout="wide")
@@ -234,8 +236,8 @@ with tab2:
             columns={
                 "id_member": "Código do Membro",
                 "member_name": "Nome",
-                "phone_number": "Número de Telefone",
-                "t_shirt": "Número da Camiseta",
+                "phone_number": "Telefone",
+                "t_shirt": "Camiseta",
                 "food_allergy": "Alergia Alimento",
                 "sower": "Semeador",
                 "ministry_position": "Cargo Ministerial",
@@ -248,8 +250,8 @@ with tab2:
         )
         expected_cols = [
             "Nome",
-            "Número de Telefone",
-            "Número da Camiseta",
+            "Telefone",
+            "Camiseta",
             "Alergia Alimento",
             "Semeador",
             "Cargo Ministerial",
@@ -403,30 +405,138 @@ with tab2:
 
 # -------------------- TABELA DE JOVENS --------------------
 with tab3:
-    st.subheader("👥 Jovens Cadastrados")
+    st.subheader("📊 Dashboard de Jovens Cadastrados")
+
     members = members if members is not None else []
 
     if members:
         df = pd.DataFrame(members)
         if "member_name" in df.columns:
-            st.metric("Total de Jovens Cadastrados", len(df))
-            st.dataframe(
-                df.rename(
-                    columns={
-                        "member_name": "Nome",
-                        "phone_number": "Número de Telefone",
-                        "t_shirt": "Número da Camiseta",
-                        "food_allergy": "Alergia Alimento",
-                        "sower": "Semeador",
-                        "ministry_position": "Cargo Ministerial",
-                        "date_birth": "Data de Nascimento",
-                        "email": "E-mail",
-                        "id_member": "Código do Membro",
-                    }
-                ),
-                width="stretch",
-                hide_index=True,
+            df = df.rename(
+                columns={
+                    "member_name": "Nome",
+                    "phone_number": "Telefone",
+                    "t_shirt": "Camiseta",
+                    "food_allergy": "Alergia",
+                    "sower": "Semeador",
+                    "ministry_position": "Cargo",
+                    "date_birth": "Nascimento",
+                    "email": "Email",
+                    "id_member": "ID",
+                }
             )
+
+            st.markdown("### 🎛️ Filtros")
+
+            col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
+
+            with col_f1:
+                semeador_sel = st.multiselect(
+                    "Semeador",
+                    options=sorted(df["Semeador"].dropna().unique()),
+                    default=sorted(df["Semeador"].dropna().unique()),
+                    placeholder="Selecione uma opção",
+                )
+
+            df["Nascimento"] = pd.to_datetime(df["Nascimento"], errors="coerce")
+            today = pd.Timestamp.today()
+            df["Idade"] = (today - df["Nascimento"]).dt.days // 365
+
+            df["Alergia"] = df["Alergia"].fillna("Nenhuma")
+            df["Cargo"] = df["Cargo"].fillna("Não informado")
+            df["Camiseta"] = df["Camiseta"].fillna("Não informado")
+
+            df_filtrado = df[(df["Semeador"].isin(semeador_sel))]
+
+            col1, col2 = st.columns(2)
+
+            col1.metric("Total de Jovens Cadastrados", len(df_filtrado))
+            idade_media = df_filtrado["Idade"].mean()
+
+            col2.metric(
+                "Idade Média",
+                f"{idade_media:.1f} anos" if not pd.isna(idade_media) else "N/A",
+            )
+
+            col4, col5, col6 = st.columns(3)
+
+            with col4:
+                semeadores = df_filtrado["Semeador"].value_counts().reset_index()
+                semeadores.columns = ["Semeador", "Total"]
+
+                fig3 = px.bar(
+                    semeadores,
+                    x="Semeador",
+                    y="Total",
+                    title="Semeadores",
+                    text="Total",
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+
+            with col5:
+                camisetas = df_filtrado["Camiseta"].value_counts().reset_index()
+                camisetas.columns = ["Camiseta", "Total"]
+
+                fig1 = px.bar(
+                    camisetas, x="Camiseta", y="Total", title="Camisetas", text="Total"
+                )
+                st.plotly_chart(fig1, use_container_width=True)
+
+            with col6:
+                cargos = df_filtrado["Cargo"].value_counts().reset_index()
+                cargos.columns = ["Cargo", "Total"]
+
+                fig3 = px.bar(
+                    cargos,
+                    x="Cargo",
+                    y="Total",
+                    title="Cargos Ministeriais",
+                    text="Total",
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+
+            col7, col8 = st.columns(2)
+
+            with col7:
+                alergias = df_filtrado["Alergia"].value_counts().reset_index()
+                cargos.columns = ["Alergia", "Total"]
+
+                fig3 = px.bar(
+                    cargos,
+                    x="Alergia",
+                    y="Total",
+                    title="Jovens com Alergia a Alimento",
+                    text="Total",
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+
+            with col8:
+                fig4 = px.histogram(
+                    df_filtrado,
+                    x="Idade",
+                    nbins=10,
+                    title="Distribuição de Idade",
+                )
+
+                fig4.update_traces(
+                    texttemplate="%{y}",
+                    textposition="outside",
+                    marker_line_width=1,
+                    marker_line_color="white",
+                )
+
+                fig4.update_layout(
+                    bargap=0.1,
+                    xaxis_title="Idade",
+                    yaxis_title="Quantidade",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                )
+
+                st.plotly_chart(fig4, use_container_width=True)
+
+            st.subheader("Dados completos")
+            st.dataframe(df_filtrado)
+
         else:
             st.error("❌ Erro no formato dos dados de cadastro dos Jovens")
     else:
