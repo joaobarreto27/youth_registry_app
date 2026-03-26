@@ -12,11 +12,19 @@ controller = CookieController()
 # ==================== CONFIGURAÇÃO DA PÁGINA ====================
 st.set_page_config(page_title="Sistema de Cadastro", page_icon="📋", layout="wide")
 
-BASE_URL = st.secrets.get("api_base_url", "http://localhost:8000")
-API_URL = f"{BASE_URL}/registered"
-AUTH_URL = f"{BASE_URL}/auth"
+API_URL = st.secrets.get("api_base_url", "http://localhost:8000")
 
 st.header("📋 Sistema de Cadastro de Jovens AduPno")
+
+
+def get_api_url():
+    base = st.secrets.get("api_base_url", "http://localhost:8000")
+    return f"{base}/registered"
+
+
+def get_auth_url():
+    base = st.secrets.get("api_base_url", "http://localhost:8000")
+    return f"{base}/auth"
 
 
 # ==================== LOGIN =================================
@@ -29,7 +37,9 @@ def login():
         if submit:
             payload = {"username": username, "password": password}
             try:
-                response = requests.post(f"{AUTH_URL}/login", data=payload, timeout=30)
+                response = requests.post(
+                    f"{get_auth_url()}/login", data=payload, timeout=30
+                )
 
                 if response.status_code == 200:
                     st.session_state["token"] = response.json().get("access_token")
@@ -49,7 +59,9 @@ def login():
 @st.cache_data(ttl=5)
 def list_all_members():
     try:
-        response = requests.get(f"{API_URL}", headers=get_auth_header(), timeout=30)
+        response = requests.get(
+            f"{get_api_url()}", headers=get_auth_header(), timeout=30
+        )
         if response.status_code == 200:
             return response.json()
         return []
@@ -81,7 +93,7 @@ def create_member_app(
             "date_birth": date_birth.isoformat(),
             "email": email,
         }
-        response = requests.post(f"{API_URL}", json=payload, timeout=30)
+        response = requests.post(f"{get_api_url()}", json=payload, timeout=30)
 
         return True, response
     except Exception as e:
@@ -431,7 +443,7 @@ def main():
                         if changed:
                             try:
                                 response = requests.put(
-                                    f"{API_URL}/{int(id_member)}",
+                                    f"{get_api_url()}/{int(id_member)}",
                                     json=payload,
                                     timeout=30,
                                 )
@@ -474,7 +486,7 @@ def main():
                         if not filtered.empty:  # type: ignore
                             members_deleted.append(filtered.values[0])  # type: ignore
                         requests.delete(
-                            f"{API_URL}/{int(id_member)}",
+                            f"{get_api_url()}/{int(id_member)}",
                             headers=get_auth_header(),
                             timeout=30,
                         )
