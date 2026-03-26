@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from .engine_database import engine, Base
-from .routes import router_register_members
+from .routes import router_register_members, router_auth
 
 engine = engine
 
@@ -23,3 +23,5 @@ async def read_root():
 
 
 api.include_router(router_register_members, prefix="/registered", tags=["members"])
+
+api.include_router(router_auth, prefix="/auth", tags=["authentication"])
