@@ -320,6 +320,7 @@ def main():
                 df_edited["Data de Nascimento"], format="%Y-%m-%d", errors="coerce"
             )
             expected_cols = [
+                "Código",
                 "Nome",
                 "Gênero",
                 "Telefone",
@@ -329,7 +330,6 @@ def main():
                 "Cargo Ministerial",
                 "Data de Nascimento",
                 "E-mail",
-                "Código",
             ]
             for c in expected_cols:
                 if c not in df_edited.columns:
@@ -346,6 +346,8 @@ def main():
                 num_rows="fixed",
                 width="content",
                 column_config={
+                    "Código": st.column_config.TextColumn(disabled=True),
+                    "Nome": st.column_config.TextColumn(),
                     "Gênero": st.column_config.SelectboxColumn(
                         options=["Masculino", "Feminino"]
                     ),
@@ -377,7 +379,6 @@ def main():
                     "E-mail": st.column_config.TextColumn(),
                     "Telefone": st.column_config.TextColumn(),
                     "Nome": st.column_config.TextColumn(),
-                    "Código": st.column_config.TextColumn(disabled=True),
                 },
             )
 
@@ -501,6 +502,7 @@ def main():
             if "member_name" in df.columns:
                 df = df.rename(
                     columns={
+                        "id_member": "ID",
                         "member_name": "Nome",
                         "gender": "Gênero",
                         "phone_number": "Telefone",
@@ -510,7 +512,6 @@ def main():
                         "ministry_position": "Cargo",
                         "date_birth": "Nascimento",
                         "email": "Email",
-                        "id_member": "ID",
                     }
                 )
 
@@ -574,7 +575,6 @@ def main():
                 )
                 col5.metric("👨 Idade Média Meninos", label_meninos)
 
-                # Média Geral
                 val_geral = df_filtrado["Idade"].mean()
                 label_geral = f"{val_geral:.1f} anos" if pd.notna(val_geral) else "N/A"
                 col6.metric("👥 Idade Média Mocidade", label_geral)
