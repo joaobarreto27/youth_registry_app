@@ -24,6 +24,7 @@ class YouthMembersSchema(Base):
         nullable=False,
     )
     member_name: Column[str] = Column(String(255), nullable=False)
+    gender: Column[str] = Column(String(10), nullable=False)
     phone_number: Column[str] = Column(String(15), nullable=False)
     t_shirt: Column[str] = Column(CHAR(2), nullable=False)
     food_allergy: Column[str] = Column(CHAR(3), nullable=False)

@@ -60,6 +60,7 @@ def list_all_members():
 
 def create_member_app(
     member_name,
+    gender,
     phone_number,
     t_shirt,
     food_allergy,
@@ -71,6 +72,7 @@ def create_member_app(
     try:
         payload = {
             "member_name": member_name,
+            "gender": gender,
             "phone_number": phone_number,
             "t_shirt": t_shirt,
             "food_allergy": food_allergy,
@@ -197,6 +199,12 @@ def main():
             member_name = st.text_input(
                 "👤 Nome", placeholder="Digite o nome completo", key="criador_nome"
             )
+            gender = st.selectbox(
+                "🚻 Gênero",
+                ["Masculino", "Feminino"],
+                index=None,
+                placeholder="Selecione uma opção",
+            )
             phone = st.text_input(
                 "📱 Número de Telefone",
                 placeholder="(11) 94002-8922",
@@ -257,6 +265,7 @@ def main():
                 else:
                     success, result = create_member_app(
                         member_name,
+                        gender,
                         phone,
                         t_shirt,
                         food_allergy,
@@ -270,7 +279,7 @@ def main():
                             f"✅ Jovem: **{member_name}** cadastrado com sucesso!"
                         )
                         st.session_state.members = list_all_members()
-                        time.sleep(6)
+                        time.sleep(3)
                         st.rerun()
                     elif success and result.status_code == 400:  # type: ignore
                         try:
@@ -295,8 +304,9 @@ def main():
             df_edited = pd.DataFrame(edited_members)
             df_edited = df_edited.rename(
                 columns={
-                    "id_member": "Código do Membro",
+                    "id_member": "Código",
                     "member_name": "Nome",
+                    "gender": "Gênero",
                     "phone_number": "Telefone",
                     "t_shirt": "Camiseta",
                     "food_allergy": "Alergia Alimento",
@@ -311,6 +321,7 @@ def main():
             )
             expected_cols = [
                 "Nome",
+                "Gênero",
                 "Telefone",
                 "Camiseta",
                 "Alergia Alimento",
@@ -318,7 +329,7 @@ def main():
                 "Cargo Ministerial",
                 "Data de Nascimento",
                 "E-mail",
-                "Código do Membro",
+                "Código",
             ]
             for c in expected_cols:
                 if c not in df_edited.columns:
@@ -326,8 +337,8 @@ def main():
 
             df_edited = df_edited.reindex(columns=expected_cols)
 
-            df_edited["Código do Membro"] = pd.to_numeric(
-                df_edited["Código do Membro"], errors="coerce"
+            df_edited["Código"] = pd.to_numeric(
+                df_edited["Código"], errors="coerce"
             ).astype("Int64")
 
             edited_df = st.data_editor(
@@ -335,6 +346,9 @@ def main():
                 num_rows="fixed",
                 width="content",
                 column_config={
+                    "Gênero": st.column_config.SelectboxColumn(
+                        options=["Masculino", "Feminino"]
+                    ),
                     "Camiseta": st.column_config.SelectboxColumn(
                         options=[
                             "PP",
@@ -363,7 +377,7 @@ def main():
                     "E-mail": st.column_config.TextColumn(),
                     "Telefone": st.column_config.TextColumn(),
                     "Nome": st.column_config.TextColumn(),
-                    "Código do Membro": st.column_config.TextColumn(disabled=True),
+                    "Código": st.column_config.TextColumn(disabled=True),
                 },
             )
 
@@ -376,7 +390,7 @@ def main():
                     updated_members = []
 
                     for idx, row in edited_df.iterrows():
-                        id_member = row["Código do Membro"]
+                        id_member = row["Código"]
                         if pd.isna(id_member):
                             continue
 
@@ -386,6 +400,7 @@ def main():
 
                         for df_col, payload_key in [
                             ("Nome", "member_name"),
+                            ("Gênero", "gender"),
                             ("Telefone", "phone_number"),
                             ("Camiseta", "t_shirt"),
                             ("Alergia Alimento", "food_allergy"),
@@ -443,7 +458,7 @@ def main():
             with st.form("form_delete_members"):
                 rows_to_delete = st.multiselect(
                     "Selecione códigos para deletar o cadastro dos jovens",
-                    edited_df["Código do Membro"],
+                    edited_df["Código"],
                     placeholder="Escolha os códigos dos jovens que deseja excluir.",
                 )
                 submit_delete = st.form_submit_button("✅ Deletar Selecionados")
@@ -453,7 +468,7 @@ def main():
                 if submit_delete:
                     for id_member in rows_to_delete:
                         filtered = edited_df.loc[
-                            edited_df["Código do Membro"] == id_member, "Nome"
+                            edited_df["Código"] == id_member, "Nome"
                         ]
                         if not filtered.empty:  # type: ignore
                             members_deleted.append(filtered.values[0])  # type: ignore
@@ -487,6 +502,7 @@ def main():
                 df = df.rename(
                     columns={
                         "member_name": "Nome",
+                        "gender": "Gênero",
                         "phone_number": "Telefone",
                         "t_shirt": "Camiseta",
                         "food_allergy": "Alergia",
@@ -510,6 +526,13 @@ def main():
                         default=sorted(df["Semeador"].dropna().unique()),
                         placeholder="Selecione uma opção",
                     )
+                with col_f2:
+                    gender_sel = st.multiselect(
+                        "Gênero",
+                        options=sorted(df["Gênero"].dropna().unique()),
+                        default=sorted(df["Gênero"].dropna().unique()),
+                        placeholder="Selecione uma opção",
+                    )
 
                 st.divider()
                 df["Nascimento"] = pd.to_datetime(df["Nascimento"], errors="coerce")
@@ -520,21 +543,45 @@ def main():
                 df["Cargo"] = df["Cargo"].fillna("Não informado")
                 df["Camiseta"] = df["Camiseta"].fillna("Não informado")
 
-                df_filtrado = df[(df["Semeador"].isin(semeador_sel))]
+                df_filtrado = df[
+                    (df["Semeador"].isin(semeador_sel))
+                    & (df["Gênero"].isin(gender_sel))
+                ]
 
-                col1, col2 = st.columns(2)
+                col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-                col1.metric("👥 Jovens Cadastrados", len(df_filtrado))
-                idade_media = df_filtrado["Idade"].mean()
+                meninas = df_filtrado[df_filtrado["Gênero"] == "Feminino"]
+                col1.metric("👩 Meninas", len(meninas))
 
-                col2.metric(
-                    "🎂 Idade Média",
-                    f"{idade_media:.1f} anos" if not pd.isna(idade_media) else "N/A",
+                meninos = df_filtrado[df_filtrado["Gênero"] == "Masculino"]
+                col2.metric("👨 Meninos", len(meninos))
+
+                col3.metric("👥 Jovens Cadastrados", len(df_filtrado))
+
+                val_meninas = df_filtrado[df_filtrado["Gênero"] == "Feminino"][
+                    "Idade"
+                ].mean()
+                label_meninas = (
+                    f"{val_meninas:.1f} anos" if pd.notna(val_meninas) else "N/A"
                 )
+                col4.metric("👩 Idade Média Meninas", label_meninas)
 
-                col4, col5, col6 = st.columns(3)
+                val_meninos = df_filtrado[df_filtrado["Gênero"] == "Masculino"][
+                    "Idade"
+                ].mean()
+                label_meninos = (
+                    f"{val_meninos:.1f} anos" if pd.notna(val_meninos) else "N/A"
+                )
+                col5.metric("👨 Idade Média Meninos", label_meninos)
 
-                with col4:
+                # Média Geral
+                val_geral = df_filtrado["Idade"].mean()
+                label_geral = f"{val_geral:.1f} anos" if pd.notna(val_geral) else "N/A"
+                col6.metric("👥 Idade Média Mocidade", label_geral)
+
+                col7, col8, col9 = st.columns(3)
+
+                with col7:
                     semeadores = df_filtrado["Semeador"].value_counts().reset_index()
                     semeadores.columns = ["Semeador", "Total"]
 
@@ -547,7 +594,7 @@ def main():
                     )
                     st.plotly_chart(fig3, use_container_width=True)
 
-                with col5:
+                with col8:
                     camisetas = df_filtrado["Camiseta"].value_counts().reset_index()
                     camisetas.columns = ["Camiseta", "Total"]
 
@@ -560,7 +607,7 @@ def main():
                     )
                     st.plotly_chart(fig1, use_container_width=True)
 
-                with col6:
+                with col9:
                     cargos = df_filtrado["Cargo"].value_counts().reset_index()
                     cargos.columns = ["Cargo", "Total"]
 
@@ -568,14 +615,14 @@ def main():
                         cargos,
                         x="Cargo",
                         y="Total",
-                        title="⛪ Cargos Ministeriais",
+                        title="⛪ Cargo Ministerial",
                         text="Total",
                     )
                     st.plotly_chart(fig3, use_container_width=True)
 
-                col7, col8 = st.columns(2)
+                col10, col11 = st.columns(2)
 
-                with col7:
+                with col10:
                     alergias = df_filtrado["Alergia"].value_counts().reset_index()
                     alergias.columns = ["Alergia", "Total"]
 
@@ -588,7 +635,7 @@ def main():
                     )
                     st.plotly_chart(fig3, use_container_width=True)
 
-                with col8:
+                with col11:
                     fig4 = px.histogram(
                         df_filtrado,
                         x="Idade",
