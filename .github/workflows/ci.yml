@@ -55,7 +55,7 @@ jobs:
 
   precommit:
     runs-on: ubuntu-latest
-    needs: quality   # 👈 optional, but recommended
+    needs: quality
 
     steps:
       - uses: actions/checkout@v4

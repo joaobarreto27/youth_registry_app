@@ -4,3 +4,7 @@ from .youth_members_validator_schema import (
     YouthMembersBase as YouthMembersBase,
     YouthMemberUpdate as YouthMemberUpdate,
 )
+from .user_validator_schema import (
+    UserCreate as UserCreate,
+    UserResponse as UserResponse,
+)
