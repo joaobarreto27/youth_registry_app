@@ -13,19 +13,17 @@ controller = CookieController()
 # ==================== CONFIGURAÇÃO DA PÁGINA ====================
 st.set_page_config(page_title="Sistema de Cadastro", page_icon="📋", layout="wide")
 
-API_URL = st.secrets.get("api_base_url", "http://localhost:8000")
+API_URL = st.secrets["api_base_url"]
 
 st.header("📋 Sistema de Cadastro de Jovens AduPno")
 
 
 def get_api_url():
-    base = st.secrets.get("api_base_url", "http://localhost:8000")
-    return f"{base}/registered"
+    return f"{st.secrets['api_base_url']}/registered"
 
 
 def get_auth_url():
-    base = st.secrets.get("api_base_url", "http://localhost:8000")
-    return f"{base}/auth"
+    return f"{st.secrets['api_base_url']}/auth"
 
 
 # ==================== LOGIN =================================
