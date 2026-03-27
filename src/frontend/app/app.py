@@ -7,6 +7,7 @@ import re
 from datetime import date
 import plotly.express as px
 from streamlit_cookies_controller import CookieController
+import logging
 
 controller = CookieController()
 # ==================== CONFIGURAÇÃO DA PÁGINA ====================
@@ -48,12 +49,10 @@ def login():
                     try:
                         controller.set("auth_token", token, max_age=3600)
                     except Exception as e:
-                        st.warning(
-                            f"Não foi possível salvar o cookie de autenticação: {e}"
-                        )
+                        logging.warning(f"Aviso de Cookie (esperado no 1º login): {e}")
 
                     st.success("Login realizado!")
-                    time.sleep(0.5)
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error("Usuário ou senha inválidos.")
@@ -475,7 +474,7 @@ def main():
                             f"✅ Cadastro do(s) joven(s): **{list_members_edited}** atualizados com sucesso!"
                         )
                         st.session_state.members = list_all_members()
-                        time.sleep(6)
+                        time.sleep(3)
                         st.rerun()
 
             # ---------- Form para deletar ----------
@@ -512,7 +511,7 @@ def main():
                         st.cache_data.clear()
 
                     st.session_state.members = list_all_members()
-                    time.sleep(6)
+                    time.sleep(3)
                     st.rerun()
 
     # -------------------- TABELA DE JOVENS --------------------
