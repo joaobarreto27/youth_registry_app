@@ -118,7 +118,7 @@ def validate_email(email):
 def check_api_healt():
     try:
         base = st.secrets["api_base_url"]
-        response = requests.get(f"{base}/docs", timeout=15)
+        response = requests.get(f"{base}/", timeout=15)
         return response.status_code == 200, response
     except Exception as e:
         return False, e
