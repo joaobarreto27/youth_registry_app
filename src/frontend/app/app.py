@@ -19,12 +19,12 @@ st.header("📋 Sistema de Cadastro de Jovens AduPno")
 
 def get_api_url():
     base = st.secrets.get("api_base_url", "http://localhost:8000")
-    return f"{base}/registered"
+    return f"{base}/registered/"
 
 
 def get_auth_url():
     base = st.secrets.get("api_base_url", "http://localhost:8000")
-    return f"{base}/auth"
+    return f"{base}/auth/"
 
 
 # ==================== LOGIN =================================
