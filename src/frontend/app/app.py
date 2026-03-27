@@ -616,7 +616,7 @@ def main():
                         title="🌱 Semeadores",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, use_container_width=True)
+                    st.plotly_chart(fig3, width="stretch")
 
                 with col8:
                     camisetas = df_filtrado["Camiseta"].value_counts().reset_index()
@@ -629,7 +629,7 @@ def main():
                         title="👕 Camisetas",
                         text="Total",
                     )
-                    st.plotly_chart(fig1, use_container_width=True)
+                    st.plotly_chart(fig1, width="stretch")
 
                 with col9:
                     cargos = df_filtrado["Cargo"].value_counts().reset_index()
@@ -642,7 +642,7 @@ def main():
                         title="⛪ Cargo Ministerial",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, use_container_width=True)
+                    st.plotly_chart(fig3, width="stretch")
 
                 col10, col11 = st.columns(2)
 
@@ -657,7 +657,7 @@ def main():
                         title="🥗 Jovens com Alergia a Alimento",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, use_container_width=True)
+                    st.plotly_chart(fig3, width="stretch")
 
                 with col11:
                     fig4 = px.histogram(
@@ -682,7 +682,7 @@ def main():
                         plot_bgcolor="rgba(0,0,0,0)",
                     )
 
-                    st.plotly_chart(fig4, use_container_width=True)
+                    st.plotly_chart(fig4, width="stretch")
 
                 st.subheader("👥 Dados completos")
                 st.dataframe(df_filtrado)
