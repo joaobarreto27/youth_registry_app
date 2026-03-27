@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..engine_database import get_db
 from ..schemas import User
-from ..validator import UserCreate, UserResponse
+from ..validator import UserCreate, UserResponse, UserUpdatePassword
 from ..crud.create_crud_auth import (
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -16,6 +16,7 @@ from ..crud.create_crud_auth import (
     create_user,
     delete_user,
     get_all_users,
+    reset_user_password,
 )
 
 router_auth = APIRouter()
@@ -70,3 +71,18 @@ async def get_all_users_endpoint(
 ) -> List[UserResponse]:
     users = await get_all_users(db)
     return users
+
+
+@router_auth.post("/reset-password")
+async def reset_password_endpoint(
+    data: UserUpdatePassword,
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    success = await reset_user_password(db, data.user_id, data.new_password)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado"
+        )
+
+    return {"message": "Senha resetada com sucesso!"}
