@@ -19,7 +19,7 @@ st.header("📋 Sistema de Cadastro de Jovens AduPno")
 
 def get_api_url():
     base = st.secrets.get("api_base_url", "http://localhost:8000")
-    return f"{base}/registered/"
+    return f"{base}/registered"
 
 
 def get_auth_url():
@@ -94,7 +94,7 @@ def create_member_app(
             "email": email,
         }
         response = requests.post(
-            f"{get_api_url()}", json=payload, headers=get_auth_header(), timeout=30
+            f"{get_api_url()}/", json=payload, headers=get_auth_header(), timeout=30
         )
 
         return True, response
