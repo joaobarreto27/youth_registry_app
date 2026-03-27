@@ -24,7 +24,7 @@ def get_api_url():
 
 def get_auth_url():
     base = st.secrets.get("api_base_url", "http://localhost:8000")
-    return f"{base}/auth/"
+    return f"{base}/auth"
 
 
 # ==================== LOGIN =================================
@@ -60,7 +60,7 @@ def login():
 def list_all_members():
     try:
         response = requests.get(
-            f"{get_api_url()}", headers=get_auth_header(), timeout=30
+            f"{get_api_url()}/", headers=get_auth_header(), timeout=30
         )
         if response.status_code == 200:
             return response.json()
@@ -115,8 +115,8 @@ def validate_email(email):
 def check_api_healt():
     try:
         # quick timeout for health check to keep UI responsive
-        response = requests.get(
-            API_URL.replace("/registered", "/"), headers=get_auth_header(), timeout=5
+        response = requests.post(
+            f"{get_api_url()}/", headers=get_auth_header(), timeout=5
         )
         return response.status_code == 200, response
     except (ConnectionError, ConnectTimeout) as e:
