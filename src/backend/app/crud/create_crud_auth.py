@@ -18,8 +18,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# --- Funções Auxiliares (Síncronas) ---
-
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
@@ -35,10 +33,7 @@ def create_access_token(
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-# --- Funções de Banco de Dados (Assíncronas) ---
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)  # type: ignore
 
 
 async def get_user(db: AsyncSession, username: str) -> Union[User, None]:
@@ -83,4 +78,21 @@ async def delete_user(db: AsyncSession, user_id: int) -> bool:
 async def get_all_users(db: AsyncSession) -> List[User]:
     query = select(User).order_by(User.id)
     result = await db.execute(query)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore
+
+
+async def reset_user_password(
+    db: AsyncSession, user_id: int, new_password: str
+) -> bool:
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalars().first()
+
+    if not user:
+        return False
+
+    hashed_password = get_password_hash(new_password)
+    user.hashed_password = hashed_password  # type: ignore
+    await db.commit()
+    await db.refresh(user)
+    return True

@@ -7,4 +7,5 @@ from .youth_members_validator_schema import (
 from .user_validator_schema import (
     UserCreate as UserCreate,
     UserResponse as UserResponse,
+    UserUpdatePassword as UserUpdatePassword,
 )
