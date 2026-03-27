@@ -171,7 +171,9 @@ if not st.session_state.api_awake:
                     if hasattr(response, "status_code"):
                         st.write(f"Status: {response.status_code}")  # type: ignore
                     else:
-                        st.write(str(response))
+                        logging.error(
+                            f"Erro ao exibir detalhes da resposta: {response}"
+                        )
                 except Exception as e:
                     st.error(f"Erro ao exibir detalhes da resposta: {e}")
 
