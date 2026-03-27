@@ -93,7 +93,9 @@ def create_member_app(
             "date_birth": date_birth.isoformat(),
             "email": email,
         }
-        response = requests.post(f"{get_api_url()}", json=payload, timeout=30)
+        response = requests.post(
+            f"{get_api_url()}", json=payload, headers=get_auth_header(), timeout=30
+        )
 
         return True, response
     except Exception as e:
@@ -450,6 +452,7 @@ def main():
                                 response = requests.put(
                                     f"{get_api_url()}/{int(id_member)}",
                                     json=payload,
+                                    headers=get_auth_header(),
                                     timeout=30,
                                 )
                                 if response.status_code == 200:
