@@ -1,7 +1,7 @@
 import time
 import streamlit as st
 import requests
-from requests.exceptions import ConnectionError, ConnectTimeout
+from requests.exceptions import ConnectionError
 import pandas as pd
 import re
 from datetime import date
@@ -117,11 +117,9 @@ def validate_email(email):
 
 def check_api_healt():
     try:
-        base = st.secrets.get("api_base_url", "http://localhost:8000")
-        response = requests.get(f"{base}/docs", timeout=5)
+        base = st.secrets["api_base_url"]
+        response = requests.get(f"{base}/docs", timeout=15)
         return response.status_code == 200, response
-    except (ConnectionError, ConnectTimeout) as e:
-        return False, e
     except Exception as e:
         return False, e
 
