@@ -470,7 +470,7 @@ def main():
                     if updated_members:
                         list_members_edited = ", ".join(updated_members)
                         st.success(
-                            f"✅ Cadastro do(s) joven(s): **{list_members_edited}** atualizados com sucesso!"
+                            f"✅ Cadastro do(s) joven(s): **{list_members_edited}** atualizado(s) com sucesso!"
                         )
                         st.session_state.members = list_all_members()
                         time.sleep(3)
@@ -615,7 +615,9 @@ def main():
                         title="🌱 Semeadores",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, width="stretch")
+                    st.plotly_chart(
+                        fig3, width="stretch", config={"doubleClick": "False"}
+                    )
 
                 with col8:
                     camisetas = df_filtrado["Camiseta"].value_counts().reset_index()
@@ -628,7 +630,9 @@ def main():
                         title="👕 Camisetas",
                         text="Total",
                     )
-                    st.plotly_chart(fig1, width="stretch")
+                    st.plotly_chart(
+                        fig1, width="stretch", config={"doubleClick": "False"}
+                    )
 
                 with col9:
                     cargos = df_filtrado["Cargo"].value_counts().reset_index()
@@ -641,7 +645,9 @@ def main():
                         title="⛪ Cargo Ministerial",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, width="stretch")
+                    st.plotly_chart(
+                        fig3, width="stretch", config={"doubleClick": "False"}
+                    )
 
                 col10, col11 = st.columns(2)
 
@@ -656,7 +662,9 @@ def main():
                         title="🥗 Jovens com Alergia a Alimento",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, width="stretch")
+                    st.plotly_chart(
+                        fig3, width="stretch", config={"doubleClick": "False"}
+                    )
 
                 with col11:
                     fig4 = px.histogram(
@@ -681,7 +689,11 @@ def main():
                         plot_bgcolor="rgba(0,0,0,0)",
                     )
 
-                    st.plotly_chart(fig4, width="stretch")
+                    st.plotly_chart(
+                        fig4,
+                        width="stretch",
+                        config={"doubleClick": False, "displayModeBar": False},
+                    )
 
                 st.subheader("👥 Dados completos")
                 st.dataframe(df_filtrado)
