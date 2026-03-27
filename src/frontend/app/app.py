@@ -139,7 +139,6 @@ def get_auth_header():
 # ==================== VERIFICAÇÃO DE SAÚDE DA API ====================
 if "api_awake" not in st.session_state:
     st.session_state.api_awake = False
-
 if "api_attempts" not in st.session_state:
     st.session_state.api_attempts = 0
 
@@ -147,40 +146,39 @@ if not st.session_state.api_awake:
     placeholder = st.empty()
 
     with placeholder.container():
-        with st.status("🚀 Acordando o servidor...", expanded=True):
-            awake, response = check_api_healt()  # type: ignore
+        with st.status(
+            f"🚀 Verificando API... (Tentativa {st.session_state.api_attempts + 1})",
+            expanded=True,
+        ) as status:
+            awake, response = check_api_healt()
 
-        if awake:
-            st.session_state.api_awake = True
-            st.session_state.api_attempts = 0
-            placeholder.success("✅ Servidor Online!")
-            time.sleep(0.1)
-            placeholder.empty()
-            st.rerun()
-        else:
-            st.session_state.api_attempts += 1
-            if st.session_state.api_attempts < 3:
-                st.warning("😴 A API está acordando, tentando novamente...")
-                time.sleep(1)
+            if awake:
+                st.session_state.api_awake = True
+                st.session_state.api_attempts = 0
+                status.update(
+                    label="✅ Servidor Online!", state="complete", expanded=False
+                )
+                time.sleep(0.5)
                 st.rerun()
             else:
-                st.error(
-                    "❌ Não foi possível conectar com a API após múltiplas tentativas."
-                )
-                try:
-                    if hasattr(response, "status_code"):
-                        st.write(f"Status: {response.status_code}")  # type: ignore
-                    else:
-                        logging.error(
-                            f"Erro ao exibir detalhes da resposta: {response}"
-                        )
-                except Exception as e:
-                    st.error(f"Erro ao exibir detalhes da resposta: {e}")
-
-                if st.button("Tentar novamente"):
-                    st.session_state.api_attempts = 0
-                    time.sleep(0.2)
+                st.session_state.api_attempts += 1
+                if st.session_state.api_attempts < 5:
+                    st.warning("😴 A API está acordando, tentando novamente em 2s...")
+                    time.sleep(2)
                     st.rerun()
+                else:
+                    status.update(label="❌ Erro de Conexão", state="error")
+                    st.error("Não foi possível conectar à API após várias tentativas.")
+
+                    if hasattr(response, "status_code"):
+                        st.info(f"Resposta do Servidor: {response.status_code}")  # type: ignore
+                    else:
+                        st.code(f"Erro técnico: {response}")
+
+                    if st.button("🔄 Forçar Nova Tentativa"):
+                        st.session_state.api_attempts = 0
+                        st.rerun()
+                    st.stop()
 
 
 # ==================== INTERFACE STREAMLIT ====================
