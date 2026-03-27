@@ -1,22 +1,29 @@
 import time
 import streamlit as st
 import requests
-from requests.exceptions import ConnectionError, ConnectTimeout
+from requests.exceptions import ConnectionError
 import pandas as pd
 import re
 from datetime import date
 import plotly.express as px
 from streamlit_cookies_controller import CookieController
+import logging
 
 controller = CookieController()
 # ==================== CONFIGURAÇÃO DA PÁGINA ====================
 st.set_page_config(page_title="Sistema de Cadastro", page_icon="📋", layout="wide")
 
-BASE_URL = st.secrets.get("api_base_url", "http://localhost:8000")
-API_URL = f"{BASE_URL}/registered"
-AUTH_URL = f"{BASE_URL}/auth"
+API_URL = st.secrets["api_base_url"]
 
 st.header("📋 Sistema de Cadastro de Jovens AduPno")
+
+
+def get_api_url():
+    return f"{st.secrets['api_base_url']}/registered"
+
+
+def get_auth_url():
+    return f"{st.secrets['api_base_url']}/auth"
 
 
 # ==================== LOGIN =================================
@@ -29,15 +36,21 @@ def login():
         if submit:
             payload = {"username": username, "password": password}
             try:
-                response = requests.post(f"{AUTH_URL}/login", data=payload, timeout=30)
+                response = requests.post(
+                    f"{get_auth_url()}/login", data=payload, timeout=30
+                )
 
                 if response.status_code == 200:
-                    st.session_state["token"] = response.json().get("access_token")
-                    controller.set(
-                        "auth_token", st.session_state["token"], max_age=3600
-                    )
+                    token = response.json().get("access_token")
+                    st.session_state["token"] = token
+
+                    try:
+                        controller.set("auth_token", token, max_age=3600)
+                    except Exception as e:
+                        logging.warning(f"Aviso de Cookie (esperado no 1º login): {e}")
+
                     st.success("Login realizado!")
-                    time.sleep(0.5)
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error("Usuário ou senha inválidos.")
@@ -49,7 +62,9 @@ def login():
 @st.cache_data(ttl=5)
 def list_all_members():
     try:
-        response = requests.get(f"{API_URL}", headers=get_auth_header(), timeout=30)
+        response = requests.get(
+            f"{get_api_url()}/", headers=get_auth_header(), timeout=30
+        )
         if response.status_code == 200:
             return response.json()
         return []
@@ -81,7 +96,9 @@ def create_member_app(
             "date_birth": date_birth.isoformat(),
             "email": email,
         }
-        response = requests.post(f"{API_URL}", json=payload, timeout=30)
+        response = requests.post(
+            f"{get_api_url()}/", json=payload, headers=get_auth_header(), timeout=30
+        )
 
         return True, response
     except Exception as e:
@@ -100,13 +117,9 @@ def validate_email(email):
 
 def check_api_healt():
     try:
-        # quick timeout for health check to keep UI responsive
-        response = requests.get(
-            API_URL.replace("/registered", "/"), headers=get_auth_header(), timeout=5
-        )
+        base = st.secrets["api_base_url"]
+        response = requests.get(f"{base}/docs", timeout=15)
         return response.status_code == 200, response
-    except (ConnectionError, ConnectTimeout) as e:
-        return False, e
     except Exception as e:
         return False, e
 
@@ -122,7 +135,6 @@ def get_auth_header():
 # ==================== VERIFICAÇÃO DE SAÚDE DA API ====================
 if "api_awake" not in st.session_state:
     st.session_state.api_awake = False
-
 if "api_attempts" not in st.session_state:
     st.session_state.api_attempts = 0
 
@@ -130,44 +142,54 @@ if not st.session_state.api_awake:
     placeholder = st.empty()
 
     with placeholder.container():
-        with st.status("🚀 Acordando o servidor...", expanded=True):
-            awake, response = check_api_healt()  # type: ignore
+        with st.status(
+            f"🚀 Verificando API... (Tentativa {st.session_state.api_attempts + 1})",
+            expanded=True,
+        ) as status:
+            awake, response = check_api_healt()
 
-        if awake:
-            st.session_state.api_awake = True
-            st.session_state.api_attempts = 0
-            placeholder.success("✅ Servidor Online!")
-            time.sleep(0.1)
-            placeholder.empty()
-            st.rerun()
-        else:
-            st.session_state.api_attempts += 1
-            if st.session_state.api_attempts < 3:
-                st.warning("😴 A API está acordando, tentando novamente...")
-                time.sleep(1)
+            if awake:
+                st.session_state.api_awake = True
+                st.session_state.api_attempts = 0
+                status.update(
+                    label="✅ Servidor Online!", state="complete", expanded=False
+                )
+                time.sleep(0.5)
                 st.rerun()
             else:
-                st.error(
-                    "❌ Não foi possível conectar com a API após múltiplas tentativas."
-                )
-                try:
-                    if hasattr(response, "status_code"):
-                        st.write(f"Status: {response.status_code}")  # type: ignore
-                    else:
-                        st.write(str(response))
-                except Exception as e:
-                    st.error(f"Erro ao exibir detalhes da resposta: {e}")
-
-                if st.button("Tentar novamente"):
-                    st.session_state.api_attempts = 0
-                    time.sleep(0.2)
+                st.session_state.api_attempts += 1
+                if st.session_state.api_attempts < 5:
+                    st.warning("😴 A API está acordando, tentando novamente em 2s...")
+                    time.sleep(2)
                     st.rerun()
+                else:
+                    status.update(label="❌ Erro de Conexão", state="error")
+                    st.error("Não foi possível conectar à API após várias tentativas.")
+
+                    if hasattr(response, "status_code"):
+                        st.info(f"Resposta do Servidor: {response.status_code}")  # type: ignore
+                    else:
+                        st.code(f"Erro técnico: {response}")
+
+                    if st.button("🔄 Forçar Nova Tentativa"):
+                        st.session_state.api_attempts = 0
+                        st.rerun()
+                    st.stop()
 
 
 # ==================== INTERFACE STREAMLIT ====================
 def main():
+    if not st.session_state.get("api_awake"):
+        st.stop()
+
+    saved_token = None
+
     if "token" not in st.session_state:
-        saved_token = controller.get("auth_token")
+        try:
+            saved_token = controller.get("auth_token")
+        except (TypeError, Exception):
+            saved_token = None
+
         if saved_token:
             st.session_state["token"] = saved_token
             st.rerun()
@@ -274,10 +296,11 @@ def main():
                         date_birth,
                         email,
                     )
-                    if success and result.status_code == 200:  # type: ignore
+                    if success and 200 <= result.status_code < 300:  # type: ignore
                         st.success(
                             f"✅ Jovem: **{member_name}** cadastrado com sucesso!"
                         )
+                        st.cache_data.clear()
                         st.session_state.members = list_all_members()
                         time.sleep(3)
                         st.rerun()
@@ -378,7 +401,6 @@ def main():
                     "Data de Nascimento": st.column_config.DateColumn(),
                     "E-mail": st.column_config.TextColumn(),
                     "Telefone": st.column_config.TextColumn(),
-                    "Nome": st.column_config.TextColumn(),
                 },
             )
 
@@ -431,8 +453,9 @@ def main():
                         if changed:
                             try:
                                 response = requests.put(
-                                    f"{API_URL}/{int(id_member)}",
+                                    f"{get_api_url()}/{int(id_member)}",
                                     json=payload,
+                                    headers=get_auth_header(),
                                     timeout=30,
                                 )
                                 if response.status_code == 200:
@@ -447,10 +470,10 @@ def main():
                     if updated_members:
                         list_members_edited = ", ".join(updated_members)
                         st.success(
-                            f"✅ Cadastro do(s) joven(s): **{list_members_edited}** atualizados com sucesso!"
+                            f"✅ Cadastro do(s) joven(s): **{list_members_edited}** atualizado(s) com sucesso!"
                         )
                         st.session_state.members = list_all_members()
-                        time.sleep(6)
+                        time.sleep(3)
                         st.rerun()
 
             # ---------- Form para deletar ----------
@@ -474,7 +497,7 @@ def main():
                         if not filtered.empty:  # type: ignore
                             members_deleted.append(filtered.values[0])  # type: ignore
                         requests.delete(
-                            f"{API_URL}/{int(id_member)}",
+                            f"{get_api_url()}/{int(id_member)}",
                             headers=get_auth_header(),
                             timeout=30,
                         )
@@ -487,7 +510,7 @@ def main():
                         st.cache_data.clear()
 
                     st.session_state.members = list_all_members()
-                    time.sleep(6)
+                    time.sleep(3)
                     st.rerun()
 
     # -------------------- TABELA DE JOVENS --------------------
@@ -592,7 +615,9 @@ def main():
                         title="🌱 Semeadores",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, use_container_width=True)
+                    st.plotly_chart(
+                        fig3, width="stretch", config={"doubleClick": "False"}
+                    )
 
                 with col8:
                     camisetas = df_filtrado["Camiseta"].value_counts().reset_index()
@@ -605,7 +630,9 @@ def main():
                         title="👕 Camisetas",
                         text="Total",
                     )
-                    st.plotly_chart(fig1, use_container_width=True)
+                    st.plotly_chart(
+                        fig1, width="stretch", config={"doubleClick": "False"}
+                    )
 
                 with col9:
                     cargos = df_filtrado["Cargo"].value_counts().reset_index()
@@ -618,7 +645,9 @@ def main():
                         title="⛪ Cargo Ministerial",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, use_container_width=True)
+                    st.plotly_chart(
+                        fig3, width="stretch", config={"doubleClick": "False"}
+                    )
 
                 col10, col11 = st.columns(2)
 
@@ -633,7 +662,9 @@ def main():
                         title="🥗 Jovens com Alergia a Alimento",
                         text="Total",
                     )
-                    st.plotly_chart(fig3, use_container_width=True)
+                    st.plotly_chart(
+                        fig3, width="stretch", config={"doubleClick": "False"}
+                    )
 
                 with col11:
                     fig4 = px.histogram(
@@ -658,7 +689,11 @@ def main():
                         plot_bgcolor="rgba(0,0,0,0)",
                     )
 
-                    st.plotly_chart(fig4, use_container_width=True)
+                    st.plotly_chart(
+                        fig4,
+                        width="stretch",
+                        config={"doubleClick": False, "displayModeBar": False},
+                    )
 
                 st.subheader("👥 Dados completos")
                 st.dataframe(df_filtrado)
