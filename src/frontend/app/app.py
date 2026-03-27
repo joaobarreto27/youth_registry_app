@@ -178,8 +178,14 @@ if not st.session_state.api_awake:
 
 # ==================== INTERFACE STREAMLIT ====================
 def main():
+    saved_token = None
+
     if "token" not in st.session_state:
-        saved_token = controller.get("auth_token")
+        try:
+            saved_token = controller.get("auth_token")
+        except (TypeError, Exception):
+            saved_token = None
+
         if saved_token:
             st.session_state["token"] = saved_token
             st.rerun()
@@ -390,7 +396,6 @@ def main():
                     "Data de Nascimento": st.column_config.DateColumn(),
                     "E-mail": st.column_config.TextColumn(),
                     "Telefone": st.column_config.TextColumn(),
-                    "Nome": st.column_config.TextColumn(),
                 },
             )
 
