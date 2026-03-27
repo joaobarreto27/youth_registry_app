@@ -186,9 +186,6 @@ if not st.session_state.api_awake:
 # ==================== INTERFACE STREAMLIT ====================
 def main():
     if not st.session_state.get("api_awake"):
-        st.warning(
-            "⚠️ A API não está disponível. Por favor, tente novamente mais tarde."
-        )
         st.stop()
 
     saved_token = None
