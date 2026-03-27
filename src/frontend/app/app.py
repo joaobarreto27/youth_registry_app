@@ -42,10 +42,16 @@ def login():
                 )
 
                 if response.status_code == 200:
-                    st.session_state["token"] = response.json().get("access_token")
-                    controller.set(
-                        "auth_token", st.session_state["token"], max_age=3600
-                    )
+                    token = response.json().get("access_token")
+                    st.session_state["token"] = token
+
+                    try:
+                        controller.set("auth_token", token, max_age=3600)
+                    except Exception as e:
+                        st.warning(
+                            f"Não foi possível salvar o cookie de autenticação: {e}"
+                        )
+
                     st.success("Login realizado!")
                     time.sleep(0.5)
                     st.rerun()
@@ -114,10 +120,8 @@ def validate_email(email):
 
 def check_api_healt():
     try:
-        # quick timeout for health check to keep UI responsive
-        response = requests.post(
-            f"{get_api_url()}/", headers=get_auth_header(), timeout=5
-        )
+        base = st.secrets.get("api_base_url", "http://localhost:8000")
+        response = requests.get(f"{base}/docs", timeout=5)
         return response.status_code == 200, response
     except (ConnectionError, ConnectTimeout) as e:
         return False, e
@@ -294,10 +298,11 @@ def main():
                         date_birth,
                         email,
                     )
-                    if success and result.status_code == 200:  # type: ignore
+                    if success and 200 <= result.status_code < 300:  # type: ignore
                         st.success(
                             f"✅ Jovem: **{member_name}** cadastrado com sucesso!"
                         )
+                        st.cache_data.clear()
                         st.session_state.members = list_all_members()
                         time.sleep(3)
                         st.rerun()
