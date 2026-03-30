@@ -468,13 +468,21 @@ def main():
                     if errors:
                         st.error("❌ Erros ao atualizar membros:\n" + "\n".join(errors))
                     if updated_members:
-                        list_members_edited = ", ".join(updated_members)
-                        st.success(
-                            f"✅ Cadastro do(s) joven(s): **{list_members_edited}** atualizado(s) com sucesso!"
-                        )
-                        st.session_state.members = list_all_members()
-                        time.sleep(3)
-                        st.rerun()
+                        if len(updated_members) == 1:
+                            st.success(
+                                f"✅ Cadastro do jovem: **{updated_members[0]}** atualizado com sucesso!"
+                            )
+                            st.session_state.members = list_all_members()
+                            time.sleep(3)
+                            st.rerun()
+                        else:
+                            list_updated = ", ".join(updated_members)
+                            st.success(
+                                f"✅ Cadastro dos jovens: **{list_updated}** atualizados com sucesso!"
+                            )
+                            st.session_state.members = list_all_members()
+                            time.sleep(3)
+                            st.rerun()
 
             # ---------- Form para deletar ----------
             st.divider()
@@ -503,11 +511,15 @@ def main():
                         )
 
                     if members_deleted:
-                        list_members_deleted = ", ".join(members_deleted)
-                        st.success(
-                            f"✅ Joven(s): **{list_members_deleted}** excluídos!"
-                        )
-                        st.cache_data.clear()
+                        if len(members_deleted) == 1:
+                            st.success(
+                                f"✅ Cadastro do jovem: **{members_deleted[0]}** deletado com sucesso!"
+                            )
+                        else:
+                            list_deleted = ", ".join(members_deleted)
+                            st.success(
+                                f"✅ Cadastro dos jovens: **{list_deleted}** deletados com sucesso!"
+                            )
 
                     st.session_state.members = list_all_members()
                     time.sleep(3)
