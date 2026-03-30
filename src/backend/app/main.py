@@ -32,5 +32,5 @@ async def read_root():
 
 app.include_router(router_register_members, prefix="/registered", tags=["members"])
 
-if ENV != "PRD":
-    app.include_router(router_auth, prefix="/auth", tags=["authentication"])
+
+app.include_router(router_auth, prefix="/auth", tags=["authentication"])
